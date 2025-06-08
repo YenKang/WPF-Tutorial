@@ -1,0 +1,24 @@
+﻿<Window x:Class="HelloWPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:HelloWPF"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="350" Width="525">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+        </Grid.RowDefinitions>
+
+        <TextBox Name="TxtInput" VerticalContentAlignment="Center" Width="250" Height="40"
+                 FontSize="16" Text="{Binding BoundText}"/>
+        <Button Grid.Row="1" Name="btnSet" Content="Set" Width="100" Height="40"/>
+
+        <TextBlock Grid.Row="2" Name="tbResult" FontSize="16" Text="{Binding BoundText}"
+            VerticalAlignment="Center" HorizontalAlignment="Center" Margin="10,0,0,0"/>
+
+    </Grid>
+</Window>
