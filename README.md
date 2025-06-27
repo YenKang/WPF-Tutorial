@@ -1,26 +1,8 @@
-namespace NovaCID.Knob
-{
-    public enum KnobId
-    {
-        Left,
-        Right
-    }
+🔧 重構 Knob 事件處理流程與狀態比對邏輯
 
-    public static class KnobIdHelper
-    {
-        public static KnobId ParseFromString(string knobString)
-        {
-            if (string.IsNullOrWhiteSpace(knobString))
-                throw new ArgumentException("knobString is null or empty");
-
-            knobString = knobString.Trim();
-
-            return knobString switch
-            {
-                "Knob_0" => KnobId.Left,
-                "Knob_1" => KnobId.Right,
-                _ => throw new ArgumentException($"未知的 Knob ID：{knobString}")
-            };
-        }
-    }
-}
+- 完整實作 KnobStatus / KnobEvent / KnobEventProcessor
+- 加入 Rotate / Press 行為定義與比對邏輯
+- 建立 KnobEventRouter 分派至 IKnobHandler
+- ClimatePageViewModel 成功接收 Knob 操作事件
+- 加入 Debug Log 與溫度數值調整邏輯
+- 整合 NovaCIDViewModel 與 OnRawKnobDataReceived()
