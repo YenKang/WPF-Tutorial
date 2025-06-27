@@ -1,4 +1,3 @@
-```csharp
 using System;
 using System.Collections.Generic;
 
@@ -26,54 +25,38 @@ namespace NovaCID.Knob
             {
                 KnobStatus current = KnobStatus.Parse(line);
 
-                // 取出上一個狀態，沒有的話用目前的初始
+                // 取得舊狀態（若無則初始化為 current 的 clone）
                 if (!_knobStatusMap.TryGetValue(current.Id, out var previous))
                     previous = current.Clone();
 
-                // 記錄前一次狀態，用來比對
-                current.PreviousTouched = previous.IsTouched;
-                current.PreviousPressed = previous.IsPressed;
-                current.PreviousCounter = previous.Counter;
+                // ✨ 將判斷邏輯拆出來
+                ProcessEvent(previous, current);
 
-                // 🎯 判斷 Rotate 行為
-                if (current.IsTouched &&
-                    current.PreviousTouched &&
-                    current.Counter != current.PreviousCounter)
-                {
-                    int delta = current.Counter - current.PreviousCounter;
-                    var rotateEvent = KnobEvent.CreateRotate(current.Role, delta);
-                    _router.Route(rotateEvent);
-                }
-
-                // 🎯 判斷 Press 行為（需 Press 從 false → true）
-                if (current.IsTouched &&
-                    !current.PreviousPressed &&
-                    current.IsPressed)
-                {
-                    var pressEvent = KnobEvent.CreatePress(current.Role);
-                    _router.Route(pressEvent);
-                }
-
-                // 更新當前狀態
+                // 更新狀態快照
                 _knobStatusMap[current.Id] = current.Clone();
             }
         }
+
+        private void ProcessEvent(KnobStatus previous, KnobStatus current)
+        {
+            // ✅ Rotate 判斷條件
+            if (current.IsTouched &&
+                previous.IsTouched &&
+                current.Counter != previous.Counter)
+            {
+                int delta = current.Counter - previous.Counter;
+                var rotateEvent = KnobEvent.CreateRotate(current.Role, delta);
+                _router.Route(rotateEvent);
+            }
+
+            // ✅ Press 判斷條件（false → true）
+            if (current.IsTouched &&
+                !previous.IsPressed &&
+                current.IsPressed)
+            {
+                var pressEvent = KnobEvent.CreatePress(current.Role);
+                _router.Route(pressEvent);
+            }
+        }
     }
-}
-```
-
-
-public KnobStatus Clone()
-{
-    return new KnobStatus
-    {
-        Id = this.Id,
-        Role = this.Role,
-        IsTouched = this.IsTouched,
-        Counter = this.Counter,
-        IsPressed = this.IsPressed,
-        PreviousTouched = this.PreviousTouched,
-        PreviousCounter = this.PreviousCounter,
-        PreviousPressed = this.PreviousPressed
-    };
 }
