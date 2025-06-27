@@ -1,62 +1,29 @@
-using System;
-using System.Collections.Generic;
-
-namespace NovaCID.Knob
+private void ProcessEvent(KnobStatus previous, KnobStatus current)
 {
-    public class KnobEventProcessor
+    // 🔁 Rotate 行為（觸控中，且 Counter 變動）
+    if (current.IsTouched &&
+        previous.IsTouched &&
+        current.Counter != previous.Counter)
     {
-        private readonly IKnobEventRouter _router;
-        private readonly Dictionary<string, KnobStatus> _knobStatusMap;
+        int delta = current.Counter - previous.Counter;
 
-        public KnobEventProcessor(IKnobEventRouter router)
-        {
-            _router = router ?? throw new ArgumentNullException(nameof(router));
-            _knobStatusMap = new Dictionary<string, KnobStatus>();
-        }
+        // 🔍 印出詳細 Rotate log
+        Debug.WriteLine($"🔄 Rotate Detected → KnobId: {current.Id}, Role: {current.Role}, " +
+                        $"Counter: {previous.Counter} → {current.Counter}, Delta: {delta}");
 
-        public void ParseAndProcess(string rawData)
-        {
-            if (string.IsNullOrWhiteSpace(rawData))
-                return;
+        var rotateEvent = KnobEvent.CreateRotate(current.Role, delta);
+        _router.Route(rotateEvent);
+    }
 
-            string[] lines = rawData.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+    // 🔘 Press 行為（從未按下 → 按下）
+    if (current.IsTouched &&
+        !previous.IsPressed &&
+        current.IsPressed)
+    {
+        // 🔍 印出 Press log
+        Debug.WriteLine($"🟢 Press Detected → KnobId: {current.Id}, Role: {current.Role}, Pressed=True");
 
-            foreach (string line in lines)
-            {
-                KnobStatus current = KnobStatus.Parse(line);
-
-                // 取得舊狀態（若無則初始化為 current 的 clone）
-                if (!_knobStatusMap.TryGetValue(current.Id, out var previous))
-                    previous = current.Clone();
-
-                // ✨ 將判斷邏輯拆出來
-                ProcessEvent(previous, current);
-
-                // 更新狀態快照
-                _knobStatusMap[current.Id] = current.Clone();
-            }
-        }
-
-        private void ProcessEvent(KnobStatus previous, KnobStatus current)
-        {
-            // ✅ Rotate 判斷條件
-            if (current.IsTouched &&
-                previous.IsTouched &&
-                current.Counter != previous.Counter)
-            {
-                int delta = current.Counter - previous.Counter;
-                var rotateEvent = KnobEvent.CreateRotate(current.Role, delta);
-                _router.Route(rotateEvent);
-            }
-
-            // ✅ Press 判斷條件（false → true）
-            if (current.IsTouched &&
-                !previous.IsPressed &&
-                current.IsPressed)
-            {
-                var pressEvent = KnobEvent.CreatePress(current.Role);
-                _router.Route(pressEvent);
-            }
-        }
+        var pressEvent = KnobEvent.CreatePress(current.Role);
+        _router.Route(pressEvent);
     }
 }
