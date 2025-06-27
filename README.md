@@ -79,6 +79,17 @@ Knob_0,Touch=True,Counter=13   ✅ Rotate +2
 Knob_0,Touch=False,Counter=13  ← 結束
 
 ---
+
+🔘 Knob Press 行為規格
+
+✅ 觸發條件（紅線規範）
+	•	Touch == true
+	•	Press 狀態從 false → true
+
+📌 僅在轉變當下觸發事件。Press 維持 true 不會再觸發
+
+
+
 ## Press State Flow
 
 [Idle]
