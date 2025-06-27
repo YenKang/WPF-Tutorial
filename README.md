@@ -61,3 +61,19 @@ namespace NovaCID.Knob
     }
 }
 ```
+
+
+public KnobStatus Clone()
+{
+    return new KnobStatus
+    {
+        Id = this.Id,
+        Role = this.Role,
+        IsTouched = this.IsTouched,
+        Counter = this.Counter,
+        IsPressed = this.IsPressed,
+        PreviousTouched = this.PreviousTouched,
+        PreviousCounter = this.PreviousCounter,
+        PreviousPressed = this.PreviousPressed
+    };
+}
