@@ -1,117 +1,68 @@
-# WPF
+using System;
 
-# 🧭 NovaCID 專案 - Knob 操作規格書
+namespace NovaCID.Knob
+{
+    public class KnobStatus
+    {
+        public string Id { get; set; }                 // e.g. "Knob_0" or "Knob_1"
+        public KnobRole Role { get; set; }             // Driver / Passenger
+        public bool IsTouch { get; set; }              // 當前是否觸控中
+        public int Counter { get; set; }               // 當前 Counter 值
+        public bool Press { get; set; }                // 當前是否按下
 
-_Last updated: 2025/06/26_
+        // ✅ 用於事件偵測的上一次狀態快照（由 KnobEventProcessor 更新）
+        public bool PreviousTouch { get; set; }
+        public int PreviousCounter { get; set; }
+        public bool PreviousPress { get; set; }
 
-本文件定義 NovaCID 專案中，Knob 旋鈕（Knob_0 與 Knob_1）之 Rotate 與 Press 行為的完整紅線規範、狀態流程與對應實作元件。
+        /// <summary>
+        /// 從 raw data line 建立新的 KnobStatus 實例
+        /// </summary>
+        public static KnobStatus Parse(string line)
+        {
+            var parts = line.Split(',');
+            var status = new KnobStatus();
 
----
+            foreach (var part in parts)
+            {
+                if (part.StartsWith("Knob_"))
+                {
+                    status.Id = part.Trim();  // Knob_0 / Knob_1
+                }
+                else if (part.StartsWith("Role="))
+                {
+                    var roleStr = part.Substring("Role=".Length);
+                    status.Role = roleStr == "Driver" ? KnobRole.Driver : KnobRole.Passenger;
+                }
+                else if (part.StartsWith("Touch="))
+                {
+                    var value = part.Substring("Touch=".Length);
+                    status.IsTouch = bool.Parse(value);
+                }
+                else if (part.StartsWith("Counter="))
+                {
+                    var value = part.Substring("Counter=".Length);
+                    status.Counter = int.Parse(value);
+                }
+                else if (part.StartsWith("Press="))
+                {
+                    var value = part.Substring("Press=".Length);
+                    status.Press = bool.Parse(value);
+                }
+            }
 
-## 🎛 Knob 命名與角色定義
+            return status;
+        }
 
-| Knob 名稱 | 實體位置   | 對應角色     |
-|-----------|------------|--------------|
-| `Knob_0`  | 左旋鈕     | Driver（主駕）|
-| `Knob_1`  | 右旋鈕     | Passenger（副駕）|
+        public override string ToString()
+        {
+            return $"{Id} ({Role}) | Touch: {IsTouch}, Counter: {Counter}, Press: {Press}";
+        }
+    }
 
-每筆 raw string 會包含以下欄位：
-```
-Knob_0,Role=Driver,Touch=True,Counter=13,Press=False
-Knob_1,Role=Passenger,Touch=True,Counter=4,Press=True
-```
----
-
-## 🔁 Knob Rotate 行為定義
-
-### ✅ 觸發條件（紅線）
-
-- `Touch == true`
-- `Counter` 數值變化（相較上次）
-- `Delta ≠ 0`（有旋轉方向）
-
-📌 若 `Touch == false`，即使 Counter 變化也不觸發 Rotate
-
----
-
-### 🔄 Rotate 狀態流程
-
----
-
-## 🔁 Knob Rotate 行為定義
-
-### ✅ 觸發條件（紅線）
-
-- `Touch == true`
-- `Counter` 數值變化（相較上次）
-- `Delta ≠ 0`（有旋轉方向）
-
-📌 若 `Touch == false`，即使 Counter 變化也不觸發 Rotate
-
----
-
-### 🔄 Rotate 狀態流程
-
-
----
-
-### 🧪 Rotate 範例
-
-```text
-Knob_0,Touch=False,Counter=10
-Knob_0,Touch=True,Counter=10
-Knob_0,Touch=True,Counter=11   ✅ Rotate +1
-Knob_0,Touch=True,Counter=13   ✅ Rotate +2
-Knob_0,Touch=False,Counter=13  ← 結束
-
-
-
-
----
-
-### 🧪 Rotate 範例
-
-```text
-Knob_0,Touch=False,Counter=10
-Knob_0,Touch=True,Counter=10
-Knob_0,Touch=True,Counter=11   ✅ Rotate +1
-Knob_0,Touch=True,Counter=13   ✅ Rotate +2
-Knob_0,Touch=False,Counter=13  ← 結束
-
----
-
-🔘 Knob Press 行為規格
-
-✅ 觸發條件（紅線規範）
-	•	Touch == true
-	•	Press 狀態從 false → true
-
-📌 僅在轉變當下觸發事件。Press 維持 true 不會再觸發
-
-
-
-## Press State Flow
-
-[Idle]
-   ↓ Touch=True
-[被觸控中]
-   ↓ Press: false → true
-✅ 觸發 Press 行為
-   ↓ Touch=False & Press=False
-[Idle]
-
-## Press Example
-
-Knob_1,Touch=False,Press=False
-Knob_1,Touch=True,Press=False
-Knob_1,Touch=True,Press=True     ✅ Press Triggered!
-Knob_1,Touch=True,Press=True     ❌ 不再觸發
-Knob_1,Touch=False,Press=False   ← Reset 完整結束
-
-
-
-
-
-
-
-
+    public enum KnobRole
+    {
+        Driver,
+        Passenger
+    }
+}
