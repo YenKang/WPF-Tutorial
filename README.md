@@ -1,29 +1,59 @@
-private void ProcessEvent(KnobStatus previous, KnobStatus current)
+using System;
+using System.Diagnostics;
+
+namespace NovaCID.Knob
 {
-    // 🔁 Rotate 行為（觸控中，且 Counter 變動）
-    if (current.IsTouched &&
-        previous.IsTouched &&
-        current.Counter != previous.Counter)
+    public class KnobEventRouter : IKnobEventRouter
     {
-        int delta = current.Counter - previous.Counter;
+        private readonly Func<object> _getCurrentPageViewModel;
 
-        // 🔍 印出詳細 Rotate log
-        Debug.WriteLine($"🔄 Rotate Detected → KnobId: {current.Id}, Role: {current.Role}, " +
-                        $"Counter: {previous.Counter} → {current.Counter}, Delta: {delta}");
+        public KnobEventRouter(Func<object> getCurrentPageViewModel)
+        {
+            _getCurrentPageViewModel = getCurrentPageViewModel;
+        }
 
-        var rotateEvent = KnobEvent.CreateRotate(current.Role, delta);
-        _router.Route(rotateEvent);
-    }
+        public void Route(KnobEvent e)
+        {
+            var vm = _getCurrentPageViewModel();
 
-    // 🔘 Press 行為（從未按下 → 按下）
-    if (current.IsTouched &&
-        !previous.IsPressed &&
-        current.IsPressed)
-    {
-        // 🔍 印出 Press log
-        Debug.WriteLine($"🟢 Press Detected → KnobId: {current.Id}, Role: {current.Role}, Pressed=True");
+            if (vm is not IKnobHandler handler)
+            {
+                Debug.WriteLine($"⚠️ [Router] 當前頁面沒有實作 IKnobHandler，事件無法處理。Event = {e.Type}, Role = {e.Role}");
+                return;
+            }
 
-        var pressEvent = KnobEvent.CreatePress(current.Role);
-        _router.Route(pressEvent);
+            Debug.WriteLine($"📬 [Router] 收到事件：Type = {e.Type}, Role = {e.Role}");
+
+            if (e.Type == KnobEventType.Rotate)
+            {
+                if (e.Role == KnobRole.Driver)
+                {
+                    Debug.WriteLine("➡️ 呼叫 OnDriverKnobRotated()");
+                    handler.OnDriverKnobRotated(e);
+                }
+                else
+                {
+                    Debug.WriteLine("➡️ 呼叫 OnPassengerKnobRotated()");
+                    handler.OnPassengerKnobRotated(e);
+                }
+            }
+            else if (e.Type == KnobEventType.Press)
+            {
+                if (e.Role == KnobRole.Driver)
+                {
+                    Debug.WriteLine("➡️ 呼叫 OnDriverKnobPressed()");
+                    handler.OnDriverKnobPressed(e);
+                }
+                else
+                {
+                    Debug.WriteLine("➡️ 呼叫 OnPassengerKnobPressed()");
+                    handler.OnPassengerKnobPressed(e);
+                }
+            }
+            else
+            {
+                Debug.WriteLine($"❓ 未知事件類型：{e.Type}");
+            }
+        }
     }
 }
