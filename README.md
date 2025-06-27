@@ -1,68 +1,71 @@
+
+```csharp
 using System;
+using System.Collections.Generic;
 
 namespace NovaCID.Knob
 {
-    public class KnobStatus
+    public class KnobEventProcessor
     {
-        public string Id { get; set; }                 // e.g. "Knob_0" or "Knob_1"
-        public KnobRole Role { get; set; }             // Driver / Passenger
-        public bool IsTouch { get; set; }              // 當前是否觸控中
-        public int Counter { get; set; }               // 當前 Counter 值
-        public bool Press { get; set; }                // 當前是否按下
+        private readonly Dictionary<string, KnobStatus> _knobStatusMap = new();
+        private readonly IKnobEventRouter _router;
 
-        // ✅ 用於事件偵測的上一次狀態快照（由 KnobEventProcessor 更新）
-        public bool PreviousTouch { get; set; }
-        public int PreviousCounter { get; set; }
-        public bool PreviousPress { get; set; }
-
-        /// <summary>
-        /// 從 raw data line 建立新的 KnobStatus 實例
-        /// </summary>
-        public static KnobStatus Parse(string line)
+        public KnobEventProcessor(IKnobEventRouter router)
         {
-            var parts = line.Split(',');
-            var status = new KnobStatus();
+            _router = router;
+        }
 
-            foreach (var part in parts)
+        public void ParseAndProcess(string rawData)
+        {
+            var lines = rawData.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
             {
-                if (part.StartsWith("Knob_"))
+                var newStatus = KnobStatus.Parse(line);
+
+                // 比對前一筆狀態（如果有的話）
+                if (_knobStatusMap.TryGetValue(newStatus.Id, out var oldStatus))
                 {
-                    status.Id = part.Trim();  // Knob_0 / Knob_1
+                    ProcessEvents(oldStatus, newStatus);
                 }
-                else if (part.StartsWith("Role="))
+
+                // 更新快照
+                _knobStatusMap[newStatus.Id] = new KnobStatus
                 {
-                    var roleStr = part.Substring("Role=".Length);
-                    status.Role = roleStr == "Driver" ? KnobRole.Driver : KnobRole.Passenger;
-                }
-                else if (part.StartsWith("Touch="))
-                {
-                    var value = part.Substring("Touch=".Length);
-                    status.IsTouch = bool.Parse(value);
-                }
-                else if (part.StartsWith("Counter="))
-                {
-                    var value = part.Substring("Counter=".Length);
-                    status.Counter = int.Parse(value);
-                }
-                else if (part.StartsWith("Press="))
-                {
-                    var value = part.Substring("Press=".Length);
-                    status.Press = bool.Parse(value);
-                }
+                    Id = newStatus.Id,
+                    Role = newStatus.Role,
+                    IsTouch = newStatus.IsTouch,
+                    Counter = newStatus.Counter,
+                    Press = newStatus.Press,
+                    PreviousTouch = newStatus.IsTouch,    // 這些會在下次當作 "oldStatus" 使用
+                    PreviousCounter = newStatus.Counter,
+                    PreviousPress = newStatus.Press
+                };
             }
-
-            return status;
         }
-
-        public override string ToString()
-        {
-            return $"{Id} ({Role}) | Touch: {IsTouch}, Counter: {Counter}, Press: {Press}";
-        }
-    }
-
-    public enum KnobRole
-    {
-        Driver,
-        Passenger
     }
 }
+```
+
+## Compare Logic
+
+```
+private void ProcessEvents(KnobStatus oldStatus, KnobStatus newStatus)
+{
+	// ✅ Rotate 定義：Touch 是 true，且 Counter 有變化
+	if (newStatus.IsTouch && newStatus.Counter != oldStatus.Counter)
+	{
+		int delta = newStatus.Counter - oldStatus.Counter;
+		var rotateEvent = KnobEvent.CreateRotate(newStatus.Role, delta);
+		_router.Route(rotateEvent);
+	}
+
+	// ✅ Press 定義：Touch 為 true 且 Press: false ➜ true
+	if (newStatus.IsTouch && !oldStatus.Press && newStatus.Press)
+	{
+		var pressEvent = KnobEvent.CreatePress(newStatus.Role);
+		_router.Route(pressEvent);
+	}
+}
+
+```
