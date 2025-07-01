@@ -1,11 +1,14 @@
-<Ellipse x:Name="LeftKnobOuter"
-         Width="371" Height="371"
-         Fill="LightGray"
-         Stroke="Red"
-         StrokeThickness="4" />
+private void PositionLeftKnob()
+{
+    double centerX = 445;
+    double centerY = 1113; // ✅ 根據 15 cm 測量
 
-<Ellipse x:Name="LeftKnobInner"
-         Width="223" Height="223"
-         Fill="Black"
-         Stroke="Yellow"
-         StrokeThickness="2" />
+    double outerRadius = 186;
+    double innerRadius = 112;
+
+    Canvas.SetLeft(LeftKnobOuter, centerX - outerRadius);
+    Canvas.SetTop(LeftKnobOuter, centerY - outerRadius);
+
+    Canvas.SetLeft(LeftKnobInner, centerX - innerRadius);
+    Canvas.SetTop(LeftKnobInner, centerY - innerRadius);
+}
