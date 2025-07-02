@@ -1,61 +1,37 @@
-<base:NovaPageBase ... >
-    <base:NovaPageBase.Resources>
-        <Style x:Key="IconButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="48"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock x:Name="Icon" Text="{TemplateBinding Content}" HorizontalAlignment="Center"/>
-                            <TextBlock x:Name="Label" Text="{TemplateBinding Tag}" FontSize="24" FontWeight="Bold" HorizontalAlignment="Center"/>
-                        </StackPanel>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Icon" Property="Foreground" Value="#00FFFF"/>
-                                <Setter TargetName="Label" Property="Foreground" Value="#00FFFF"/>
-                                <Setter TargetName="Icon" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="1.1" ScaleY="1.1"/>
-                                    </Setter.Value>
-                                </Setter>
-                                <Setter TargetName="Icon" Property="RenderTransformOrigin" Value="0.5,0.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </base:NovaPageBase.Resources>
+```csharp
+private void UpdateRightKnobArc(int rawCounter)
+{
+    double angle = (rawCounter / 256.0) * 360.0;
 
-    <!-- ✅ 以下才是 Grid, Canvas 等畫面 -->
-    <Grid>
-        <!-- 畫面內容 -->
-    </Grid>
+    double centerX = 2115; // ✅ 你之前算好的 Right Knob 圓心 X
+    double centerY = 1113; // ✅ 你之前算好的 Right Knob 圓心 Y
+    double radius = 186;
 
-</base:NovaPageBase>
+    var geom = new StreamGeometry();
+    using (var ctx = geom.Open())
+    {
+        double startAngle = -90;  // 從上面 12 點鐘方向開始
+        double endAngle = startAngle + angle;
 
+        double startX = centerX + radius * Math.Cos(startAngle * Math.PI / 180);
+        double startY = centerY + radius * Math.Sin(startAngle * Math.PI / 180);
 
-<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="30,0">
+        double endX = centerX + radius * Math.Cos(endAngle * Math.PI / 180);
+        double endY = centerY + radius * Math.Sin(endAngle * Math.PI / 180);
 
-    <Button Style="{StaticResource IconButtonStyle}" Width="180" Height="180" Margin="30"
-            Content="🏠" Tag="Home"
-            Command="{Binding NavigateToHomeCommand}"/>
+        bool isLargeArc = angle > 180;
 
-    <Button Style="{StaticResource IconButtonStyle}" Width="180" Height="180" Margin="30"
-            Content="🚗" Tag="Drive"
-            Command="{Binding NavigateToDriveCommand}"/>
+        ctx.BeginFigure(new Point(startX, startY), false, false);
+        ctx.ArcTo(new Point(endX, endY),
+                  new Size(radius, radius),
+                  0,
+                  isLargeArc,
+                  SweepDirection.Clockwise,
+                  true,
+                  false);
+    }
 
-    <Button Style="{StaticResource IconButtonStyle}" Width="180" Height="180" Margin="30"
-            Content="🎵" Tag="Music"
-            Command="{Binding NavigateToMusicCommand}"/>
-
-    <Button Style="{StaticResource IconButtonStyle}" Width="180" Height="180" Margin="30"
-            Content="❄️" Tag="Climate"
-            Command="{Binding NavigateToClimateCommand}"/>
-
-</StackPanel>
+    geom.Freeze();
+    RightKnobArc.Data = geom;
+}
+```
