@@ -1,41 +1,26 @@
-<Button Width="180" Height="180" Margin="50" Command="{Binding NavigateToMusicCommand}" Background="Transparent" BorderThickness="0">
-    <Button.Template>
-        <ControlTemplate TargetType="Button">
-            <StackPanel>
-                <Grid Width="150" Height="150">
-                    <!-- 圓形背景 -->
-                    <Ellipse x:Name="CircleBackground" Fill="Transparent" Stroke="Cyan" StrokeThickness="2"/>
+<Grid>
+    <!-- 其他內容 ... -->
 
-                    <!-- 中央 Icon -->
-                    <Image x:Name="IconImage"
-                           Source="/Assets/Icons/music_icon.png"
-                           Width="80" Height="80"
-                           Stretch="Uniform"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Center"
-                           Opacity="0.8"/>
-                </Grid>
+    <Button x:Name="ExitFullScreenButton"
+            Content="⤢"
+            Width="50" Height="50"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="10"
+            FontSize="24"
+            Background="Transparent"
+            Foreground="White"
+            BorderThickness="0"
+            Click="ExitFullScreenButton_Click" />
+</Grid>
 
-                <!-- 文字 -->
-                <TextBlock x:Name="LabelText"
-                           Text="Music"
-                           Foreground="White"
-                           FontSize="22"
-                           HorizontalAlignment="Center"
-                           Margin="0,10,0,0"
-                           Opacity="0.8"/>
-            </StackPanel>
 
-            <!-- Hover 特效 -->
-            <ControlTemplate.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter TargetName="CircleBackground" Property="Fill" Value="#4400FFFF"/> <!-- 半透明亮藍 -->
-                    <Setter TargetName="CircleBackground" Property="Stroke" Value="#00FFFF"/>
-                    <Setter TargetName="IconImage" Property="Opacity" Value="1"/>
-                    <Setter TargetName="LabelText" Property="Foreground" Value="#00FFFF"/>
-                    <Setter TargetName="LabelText" Property="Opacity" Value="1"/>
-                </Trigger>
-            </ControlTemplate.Triggers>
-        </ControlTemplate>
-    </Button.Template>
-</Button>
+private void ExitFullScreenButton_Click(object sender, RoutedEventArgs e)
+{
+    var win = Window.GetWindow(this);
+    if (win != null)
+    {
+        win.WindowStyle = WindowStyle.SingleBorderWindow;
+        win.WindowState = WindowState.Normal;
+    }
+}
