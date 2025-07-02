@@ -1,11 +1,12 @@
-<Ellipse x:Name="LeftKnobCenterPoint"
-         Width="10" Height="10"
-         Fill="Red"
-         Opacity="1"
-         Stroke="White"
-         StrokeThickness="1"
-         IsHitTestVisible="False"/>
+<Grid>
+    <!-- 上面一層裝視窗控制按鈕 -->
+    <Grid HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0" >
+        <StackPanel Orientation="Horizontal">
+            <Button Content="—" Width="40" Height="30" Click="MinimizeButton_Click"/>
+            <Button Content="✕" Width="40" Height="30" Click="CloseButton_Click"/>
+        </StackPanel>
+    </Grid>
 
-
-Canvas.SetLeft(LeftKnobCenterPoint, centerX - 5); // 半徑 = 5
-Canvas.SetTop(LeftKnobCenterPoint, centerY - 5);
+    <!-- 下方是原本畫面內容 -->
+    <!-- ... -->
+</Grid>
