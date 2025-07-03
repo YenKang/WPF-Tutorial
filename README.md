@@ -1,131 +1,58 @@
+<StackPanel Margin="20" HorizontalAlignment="Right" VerticalAlignment="Top">
+    <TextBlock x:Name="RightSliderTextX" Text="X: 2109" FontSize="40" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+    <Slider x:Name="RightKnob_SliderX" Minimum="0" Maximum="2560" Width="300" Value="2109"/>
+    <TextBox x:Name="RightKnob_TextX" Width="200" FontSize="24" Margin="0,5,0,0" HorizontalAlignment="Center"/>
 
-```xaml
-<Window x:Class="YourNamespace.NovaCIDView"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NovaCIDView" Width="2560" Height="1440"
-        Background="Black">
+    <TextBlock x:Name="RightSliderTextY" Text="Y: 1117" FontSize="40" HorizontalAlignment="Center" Margin="0,20,0,0"/>
+    <Slider x:Name="RightKnob_SliderY" Minimum="0" Maximum="1440" Width="300" Value="1117"/>
+    <TextBox x:Name="RightKnob_TextY" Width="200" FontSize="24" Margin="0,5,0,0" HorizontalAlignment="Center"/>
+</StackPanel>
 
-    <Grid>
-        <!-- 左旋鈕控制 UI -->
-        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20">
-            <!-- X Slider -->
-            <Slider x:Name="LeftKnob_SliderX" Minimum="0" Maximum="2560" Width="300" Value="445"/>
-            <TextBox x:Name="LeftKnob_TextX" Text="445" Width="120" FontSize="28" Margin="0,5,0,0"/>
 
-            <!-- Y Slider -->
-            <Slider x:Name="LeftKnob_SliderY" Minimum="0" Maximum="1440" Width="300" Value="1113"/>
-            <TextBox x:Name="LeftKnob_TextY" Text="1113" Width="120" FontSize="28" Margin="0,5,0,0"/>
-        </StackPanel>
-
-        <!-- Knob canvas -->
-        <Canvas x:Name="KnobCanvas" Width="2560" Height="1440" Background="Transparent">
-            <Ellipse x:Name="LeftKnobOuter" Width="371" Height="371" Fill="LightGray" Stroke="Red" StrokeThickness="4"/>
-            <Ellipse x:Name="LeftKnobInner" Width="223" Height="223" Fill="Black" Stroke="Yellow" StrokeThickness="2"/>
-            <Ellipse x:Name="LeftKnobCenterPoint" Width="20" Height="20" Fill="Red"/>
-        </Canvas>
-    </Grid>
-</Window>
-```
-
-```csharp
-using System;
-using System.Windows;
-using System.Windows.Controls;
-
-namespace YourNamespace
+private void UpdateRightKnobPosition(double x, double y)
 {
-    public partial class NovaCIDView : Window
-    {
-        public NovaCIDView()
-        {
-            InitializeComponent();
+    double outerRadius = 186;
+    double innerRadius = 112;
 
-            // 🔥 只在 Loaded 再去註冊事件，確保所有元件都已初始化
-            this.Loaded += NovaCIDView_Loaded;
-        }
+    // 外圈
+    Canvas.SetLeft(RightKnobOuter, x - outerRadius);
+    Canvas.SetTop(RightKnobOuter, y - outerRadius);
 
-        private void NovaCIDView_Loaded(object sender, RoutedEventArgs e)
-        {
-            // Slider → TextBox
-            LeftKnob_SliderX.ValueChanged += LeftKnob_SliderX_ValueChanged;
-            LeftKnob_SliderY.ValueChanged += LeftKnob_SliderY_ValueChanged;
+    // 內圈
+    Canvas.SetLeft(RightKnobInner, x - innerRadius);
+    Canvas.SetTop(RightKnobInner, y - innerRadius);
 
-            // TextBox → Slider
-            LeftKnob_TextX.TextChanged += LeftKnob_TextX_TextChanged;
-            LeftKnob_TextY.TextChanged += LeftKnob_TextY_TextChanged;
-
-            // 初始同步
-            LeftKnob_TextX.Text = Math.Round(LeftKnob_SliderX.Value).ToString();
-            LeftKnob_TextY.Text = Math.Round(LeftKnob_SliderY.Value).ToString();
-            UpdateLeftKnobPosition(LeftKnob_SliderX.Value, LeftKnob_SliderY.Value);
-        }
-
-        private void LeftKnob_SliderX_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (LeftKnob_TextX == null) return;
-
-            LeftKnob_TextX.Text = Math.Round(e.NewValue).ToString();
-            UpdateLeftKnobPosition(e.NewValue, LeftKnob_SliderY?.Value ?? 0);
-        }
-
-        private void LeftKnob_SliderY_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (LeftKnob_TextY == null) return;
-
-            LeftKnob_TextY.Text = Math.Round(e.NewValue).ToString();
-            UpdateLeftKnobPosition(LeftKnob_SliderX?.Value ?? 0, e.NewValue);
-        }
-
-        private void LeftKnob_TextX_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (LeftKnob_SliderX == null) return;
-
-            if (double.TryParse(LeftKnob_TextX.Text, out double value))
-            {
-                value = Math.Max(0, Math.Min(2560, value));
-                LeftKnob_SliderX.Value = value;
-                UpdateLeftKnobPosition(value, LeftKnob_SliderY?.Value ?? 0);
-            }
-        }
-
-        private void LeftKnob_TextY_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            if (LeftKnob_SliderY == null) return;
-
-            if (double.TryParse(LeftKnob_TextY.Text, out double value))
-            {
-                value = Math.Max(0, Math.Min(1440, value));
-                LeftKnob_SliderY.Value = value;
-                UpdateLeftKnobPosition(LeftKnob_SliderX?.Value ?? 0, value);
-            }
-        }
-
-        private void UpdateLeftKnobPosition(double x, double y)
-        {
-            double outerRadius = 186;
-            double innerRadius = 112;
-            double centerRadius = 10;
-
-            Canvas.SetLeft(LeftKnobOuter, x - outerRadius);
-            Canvas.SetTop(LeftKnobOuter, y - outerRadius);
-
-            Canvas.SetLeft(LeftKnobInner, x - innerRadius);
-            Canvas.SetTop(LeftKnobInner, y - innerRadius);
-
-            Canvas.SetLeft(LeftKnobCenterPoint, x - centerRadius);
-            Canvas.SetTop(LeftKnobCenterPoint, y - centerRadius);
-        }
-    }
+    // 更新文字
+    RightSliderTextX.Text = $"X: {Math.Round(x)}";
+    RightSliderTextY.Text = $"Y: {Math.Round(y)}";
 }
-```
 
-```csharp
-this.Loaded += (s, e) =>
+private void RightKnob_TextX_TextChanged(object sender, TextChangedEventArgs e)
 {
-    LeftKnob_TextX.Text = Math.Round(LeftKnob_SliderX.Value).ToString();
-    LeftKnob_TextY.Text = Math.Round(LeftKnob_SliderY.Value).ToString();
+    if (_isUpdatingRight) return;
+    _isUpdatingRight = true;
 
-    UpdateLeftKnobPosition(LeftKnob_SliderX.Value, LeftKnob_SliderY.Value);
-};
-```
+    if (double.TryParse(RightKnob_TextX.Text, out double x))
+    {
+        x = Math.Max(0, Math.Min(2560, x));
+        RightKnob_SliderX.Value = x;
+        UpdateRightKnobPosition(x, RightKnob_SliderY.Value);
+    }
+
+    _isUpdatingRight = false;
+}
+
+private void RightKnob_TextY_TextChanged(object sender, TextChangedEventArgs e)
+{
+    if (_isUpdatingRight) return;
+    _isUpdatingRight = true;
+
+    if (double.TryParse(RightKnob_TextY.Text, out double y))
+    {
+        y = Math.Max(0, Math.Min(1440, y));
+        RightKnob_SliderY.Value = y;
+        UpdateRightKnobPosition(RightKnob_SliderX.Value, y);
+    }
+
+    _isUpdatingRight = false;
+}
