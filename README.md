@@ -18,51 +18,55 @@ using System.Windows.Media.Imaging;
 
 namespace NovaCID.Pages
 {
-    public partial class DriverPage : Page
+    public partial class DriverPage : UserControl
     {
-        // 所有地圖圖片路徑（已去掉 DriverMap_ 前綴）
-        private readonly string[] _mapPaths =
+        // 定義 Zoom Level 列舉
+        private enum MapZoomLevel
         {
-            "pack://application:,,,/NovaCID;component/Assets/DriverMaps/Normal.png",
-            "pack://application:,,,/NovaCID;component/Assets/DriverMaps/ZoomIn+1.png",
-            "pack://application:,,,/NovaCID;component/Assets/DriverMaps/ZoomIn+2.png",
-            "pack://application:,,,/NovaCID;component/Assets/DriverMaps/ZoomOut-1.png",
-            "pack://application:,,,/NovaCID;component/Assets/DriverMaps/ZoomOut-2.png"
-        };
+            ZoomOut2 = 0,
+            ZoomOut1 = 1,
+            Normal   = 2,
+            ZoomIn1  = 3,
+            ZoomIn2  = 4
+        }
 
-        private int _currentMapIndex = 0;
+        private MapZoomLevel _currentZoomLevel = MapZoomLevel.Normal;
 
         public DriverPage()
         {
             InitializeComponent();
-
-            // 預設先載入 Normal
-            _currentMapIndex = 0;
             LoadMap();
         }
 
         private void LoadMap()
         {
-            if (_currentMapIndex < 0) _currentMapIndex = 0;
-            if (_currentMapIndex >= _mapPaths.Length) _currentMapIndex = _mapPaths.Length - 1;
+            string imageName = _currentZoomLevel switch
+            {
+                MapZoomLevel.ZoomOut2 => "ZoomOut-2.png",
+                MapZoomLevel.ZoomOut1 => "ZoomOut-1.png",
+                MapZoomLevel.Normal   => "Normal.png",
+                MapZoomLevel.ZoomIn1  => "ZoomIn+1.png",
+                MapZoomLevel.ZoomIn2  => "ZoomIn+2.png",
+                _ => "Normal.png"
+            };
 
-            DriverMapImage.Source = new BitmapImage(new Uri(_mapPaths[_currentMapIndex], UriKind.Absolute));
+            DriverMapImage.Source = new BitmapImage(new Uri($"/NovaCID;component/Assets/DriverMaps/{imageName}", UriKind.Relative));
         }
 
         private void ZoomIn_Click(object sender, RoutedEventArgs e)
         {
-            if (_currentMapIndex < 2) // 最多放到 ZoomIn+2
+            if (_currentZoomLevel < MapZoomLevel.ZoomIn2)
             {
-                _currentMapIndex++;
+                _currentZoomLevel++;
                 LoadMap();
             }
         }
 
         private void ZoomOut_Click(object sender, RoutedEventArgs e)
         {
-            if (_currentMapIndex > 0) // 最多縮小到 ZoomOut-2
+            if (_currentZoomLevel > MapZoomLevel.ZoomOut2)
             {
-                _currentMapIndex--;
+                _currentZoomLevel--;
                 LoadMap();
             }
         }
