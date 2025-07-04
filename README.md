@@ -1,52 +1,51 @@
 using System;
-using System.Collections.Generic;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 
-namespace 你的命名空間
+namespace NovaCID.Pages
 {
-    public partial class DriverPage : Page
+    public partial class DriverPage : UserControl
     {
-        private readonly List<string> _mapImages = new List<string>
+        private readonly string[] _mapPaths = 
         {
-            "/Assets/Maps/DriverMap1.png",
-            "/Assets/Maps/DriverMap2.png",
-            "/Assets/Maps/DriverMap3.png",
-            "/Assets/Maps/DriverMap4.png",
-            "/Assets/Maps/DriverMap5.png"
+            "/DriverMaps/DriverMap_Normal.png",
+            "/DriverMaps/DriverMap_ZoomIn+1.png",
+            "/DriverMaps/DriverMap_ZoomIn+2.png",
+            "/DriverMaps/DriverMap_ZoomOut-1.png",
+            "/DriverMaps/DriverMap_ZoomOut-2.png"
         };
 
-        private int _currentZoomIndex = 0;
+        private int _currentIndex = 0;
 
         public DriverPage()
         {
             InitializeComponent();
-            ShowMap(_currentZoomIndex);
+            LoadMap();
         }
 
-        private void ShowMap(int index)
+        private void LoadMap()
         {
-            if (index < 0 || index >= _mapImages.Count) return;
-
-            DriverMapImage.Source = new BitmapImage(new Uri(_mapImages[index], UriKind.Relative));
+            var uri = new Uri(_mapPaths[_currentIndex], UriKind.Relative);
+            DriverMapImage.Source = new BitmapImage(uri);
         }
 
-        private void ZoomIn_Click(object sender, RoutedEventArgs e)
+        // 模擬旋鈕右轉（放大）
+        public void ZoomIn()
         {
-            if (_currentZoomIndex < _mapImages.Count - 1)
+            if (_currentIndex < _mapPaths.Length - 1)
             {
-                _currentZoomIndex++;
-                ShowMap(_currentZoomIndex);
+                _currentIndex++;
+                LoadMap();
             }
         }
 
-        private void ZoomOut_Click(object sender, RoutedEventArgs e)
+        // 模擬旋鈕左轉（縮小）
+        public void ZoomOut()
         {
-            if (_currentZoomIndex > 0)
+            if (_currentIndex > 0)
             {
-                _currentZoomIndex--;
-                ShowMap(_currentZoomIndex);
+                _currentIndex--;
+                LoadMap();
             }
         }
     }
