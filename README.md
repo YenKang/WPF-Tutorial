@@ -1,27 +1,61 @@
-<Image x:Name="POICardImage"
-       Source="/NovaCID;component/Assets/DriverPage/POICard.png"
-       Width="450"
-       Height="450"
-       Visibility="Collapsed"
-       HorizontalAlignment="Right"
-       VerticalAlignment="Top"
-       Margin="20"/>
-
-```csharp
-private bool _isPoiCardVisible = false;
-
-public void TogglePoiCard()
+public partial class DriverPage : Page, IKnobHandler
 {
-    _isPoiCardVisible = !_isPoiCardVisible;
-    PoiCardImage.Visibility = _isPoiCardVisible ? Visibility.Visible : Visibility.Collapsed;
-}
+    private bool isPoiVisible = false;
 
-private void TestTogglePoi_Click(object sender, RoutedEventArgs e)
-{
-    TogglePoiCard();
-}
-```
+    public DriverPage()
+    {
+        InitializeComponent();
+        PoiCardContainer.Visibility = Visibility.Collapsed;
+    }
 
-```xml
-<Button Content="Toggle POI" Click="TestTogglePoi_Click" Width="200" Height="60"/>
-```
+    public void OnDriverKnobRotated(KnobEvent e)
+    {
+        // 先留空或做其他 rotate 功能
+    }
+
+    public void OnPassengerKnobRotated(KnobEvent e)
+    {
+        // 同上
+    }
+
+    public void OnDriverKnobPressed(KnobEvent e)
+    {
+        // 同上
+    }
+
+    public void OnPassengerKnobPressed(KnobEvent e)
+    {
+        // 🎯 這裡加入呼叫 POI 方法
+        TogglePOICard(showOnRight: true);
+    }
+
+    private void TogglePOICard(bool showOnRight)
+    {
+        isPoiVisible = !isPoiVisible;
+
+        if (isPoiVisible)
+        {
+            PoiCardContainer.Visibility = Visibility.Visible;
+
+            if (showOnRight)
+            {
+                PoiCardContainer.HorizontalAlignment = HorizontalAlignment.Right;
+                PoiCardContainer.Margin = new Thickness(0, 300, 50, 0);
+            }
+            else
+            {
+                PoiCardContainer.HorizontalAlignment = HorizontalAlignment.Left;
+                PoiCardContainer.Margin = new Thickness(50, 300, 0, 0);
+            }
+        }
+        else
+        {
+            PoiCardContainer.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void TogglePOI_Click(object sender, RoutedEventArgs e)
+    {
+        TogglePOICard(showOnRight: true);
+    }
+}
