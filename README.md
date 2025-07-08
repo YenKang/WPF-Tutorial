@@ -1,61 +1,40 @@
-public partial class DriverPage : Page, IKnobHandler
+<Grid x:Name="PoiCard"
+      Width="200"
+      Height="120"
+      Background="#AA222222"
+      HorizontalAlignment="Center"
+      VerticalAlignment="Top"
+      Margin="0,50,0,0"
+      Visibility="{Binding IsPoiVisible, Converter={StaticResource BoolToVisibilityConverter}}">
+    <TextBlock Text="POI 資訊卡片"
+               Foreground="White"
+               FontSize="18"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"/>
+</Grid>
+
+```csharp
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+public class BoolToVisibilityConverter : IValueConverter
 {
-    private bool isPoiVisible = false;
-
-    public DriverPage()
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        InitializeComponent();
-        PoiCardContainer.Visibility = Visibility.Collapsed;
-    }
-
-    public void OnDriverKnobRotated(KnobEvent e)
-    {
-        // 先留空或做其他 rotate 功能
-    }
-
-    public void OnPassengerKnobRotated(KnobEvent e)
-    {
-        // 同上
-    }
-
-    public void OnDriverKnobPressed(KnobEvent e)
-    {
-        // 同上
-    }
-
-    public void OnPassengerKnobPressed(KnobEvent e)
-    {
-        // 🎯 這裡加入呼叫 POI 方法
-        TogglePOICard(showOnRight: true);
-    }
-
-    private void TogglePOICard(bool showOnRight)
-    {
-        isPoiVisible = !isPoiVisible;
-
-        if (isPoiVisible)
-        {
-            PoiCardContainer.Visibility = Visibility.Visible;
-
-            if (showOnRight)
-            {
-                PoiCardContainer.HorizontalAlignment = HorizontalAlignment.Right;
-                PoiCardContainer.Margin = new Thickness(0, 300, 50, 0);
-            }
-            else
-            {
-                PoiCardContainer.HorizontalAlignment = HorizontalAlignment.Left;
-                PoiCardContainer.Margin = new Thickness(50, 300, 0, 0);
-            }
-        }
+        if (value is bool && (bool)value)
+            return Visibility.Visible;
         else
-        {
-            PoiCardContainer.Visibility = Visibility.Collapsed;
-        }
+            return Visibility.Collapsed;
     }
 
-    private void TogglePOI_Click(object sender, RoutedEventArgs e)
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        TogglePOICard(showOnRight: true);
+        if (value is Visibility && (Visibility)value == Visibility.Visible)
+            return true;
+        else
+            return false;
     }
 }
+```
