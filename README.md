@@ -1,40 +1,17 @@
-<Grid x:Name="PoiCard"
-      Width="200"
-      Height="120"
-      Background="#AA222222"
-      HorizontalAlignment="Center"
-      VerticalAlignment="Top"
-      Margin="0,50,0,0"
-      Visibility="{Binding IsPoiVisible, Converter={StaticResource BoolToVisibilityConverter}}">
-    <TextBlock Text="POI 資訊卡片"
-               Foreground="White"
-               FontSize="18"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center"/>
-</Grid>
-
 ```csharp
-using System;
-using System.Globalization;
-using System.Windows;
-using System.Windows.Data;
-
-public class BoolToVisibilityConverter : IValueConverter
+private void SaveKnobPosition_Click(object sender, RoutedEventArgs e)
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is bool && (bool)value)
-            return Visibility.Visible;
-        else
-            return Visibility.Collapsed;
-    }
+    // 取得 Canvas 上 Knob 當前座標
+    double x = Canvas.GetLeft(KnobEllipse) + KnobEllipse.Width / 2;
+    double y = Canvas.GetTop(KnobEllipse) + KnobEllipse.Height / 2;
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        if (value is Visibility && (Visibility)value == Visibility.Visible)
-            return true;
-        else
-            return false;
-    }
+    // 存到 ViewModel
+    _viewModel.KnobX = x;
+    _viewModel.KnobY = y;
+
+    System.Diagnostics.Debug.WriteLine($"[儲存] KnobX: {x}, KnobY: {y}");
+
+    // 只隱藏 StackPanel
+    _viewModel.IsAdjustPanelVisible = false;
 }
 ```
