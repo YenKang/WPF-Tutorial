@@ -1,23 +1,20 @@
-private void SaveLeftKnobPosition_Click(object sender, RoutedEventArgs e)
+public DrivePage()
 {
-    // 取得 Left Knob 當前座標
-    double x = Canvas.GetLeft(LeftKnobEllipse) + LeftKnobEllipse.Width / 2;
-    double y = Canvas.GetTop(LeftKnobEllipse) + LeftKnobEllipse.Height / 2;
+    InitializeComponent();
 
-    // 存到 ViewModel
+    _viewModel = new DrivePageViewModel();
+    this.DataContext = _viewModel;
+
+    // 從設定檔讀取
+    double x = Properties.Settings.Default.LeftKnobX;
+    double y = Properties.Settings.Default.LeftKnobY;
+
+    // 更新 ViewModel
     _viewModel.LeftKnobX = x;
     _viewModel.LeftKnobY = y;
 
-    System.Diagnostics.Debug.WriteLine($"[儲存] LeftKnobX: {x}, LeftKnobY: {y}");
-
-    // 隱藏 StackPanel（Canvas 繼續顯示）
-    _viewModel.IsAdjustPanelVisible = false;
+    // 更新 Canvas Knob 位置
+    double radius = LeftKnobEllipse.Width / 2;
+    Canvas.SetLeft(LeftKnobEllipse, x - radius);
+    Canvas.SetTop(LeftKnobEllipse, y - radius);
 }
-
-<Button Content="存取 Left Knob 位置"
-        Width="150"
-        Height="50"
-        HorizontalAlignment="Center"
-        VerticalAlignment="Bottom"
-        Margin="0,0,0,20"
-        Click="SaveLeftKnobPosition_Click"/>
