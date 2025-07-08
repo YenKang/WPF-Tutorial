@@ -1,17 +1,23 @@
-```csharp
-private void SaveKnobPosition_Click(object sender, RoutedEventArgs e)
+private void SaveLeftKnobPosition_Click(object sender, RoutedEventArgs e)
 {
-    // 取得 Canvas 上 Knob 當前座標
-    double x = Canvas.GetLeft(KnobEllipse) + KnobEllipse.Width / 2;
-    double y = Canvas.GetTop(KnobEllipse) + KnobEllipse.Height / 2;
+    // 取得 Left Knob 當前座標
+    double x = Canvas.GetLeft(LeftKnobEllipse) + LeftKnobEllipse.Width / 2;
+    double y = Canvas.GetTop(LeftKnobEllipse) + LeftKnobEllipse.Height / 2;
 
     // 存到 ViewModel
-    _viewModel.KnobX = x;
-    _viewModel.KnobY = y;
+    _viewModel.LeftKnobX = x;
+    _viewModel.LeftKnobY = y;
 
-    System.Diagnostics.Debug.WriteLine($"[儲存] KnobX: {x}, KnobY: {y}");
+    System.Diagnostics.Debug.WriteLine($"[儲存] LeftKnobX: {x}, LeftKnobY: {y}");
 
-    // 只隱藏 StackPanel
+    // 隱藏 StackPanel（Canvas 繼續顯示）
     _viewModel.IsAdjustPanelVisible = false;
 }
-```
+
+<Button Content="存取 Left Knob 位置"
+        Width="150"
+        Height="50"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Bottom"
+        Margin="0,0,0,20"
+        Click="SaveLeftKnobPosition_Click"/>
