@@ -1,3 +1,11 @@
-Properties.Settings.Default.LeftKnobX = _viewModel.LeftKnobX;
-Properties.Settings.Default.LeftKnobY = _viewModel.LeftKnobY;
-Properties.Settings.Default.Save();
+[Knob Raw Data]
+    ↓
+[KnobEvent]
+    ↓
+[KnobStatus 更新]
+    ↓
+[KnobEventProcessor 差值判斷]
+    ↓
+[KnobEventRouter 分派]
+    ↓
+[ClimatePage VM 調溫度]
