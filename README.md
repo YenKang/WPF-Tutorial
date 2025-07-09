@@ -1,124 +1,40 @@
-```csharp
-using System.Collections.ObjectModel;
-using System.ComponentModel;
+<Window x:Class="MusicPageDemo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Music Page" Height="800" Width="1400" Background="#FF0D0D0D">
 
-namespace NovaCID.ViewModel
-{
-    public class MusicAlbum
-    {
-        public string Artist { get; set; }
-        public string SongName { get; set; } // ← 修改這裡
-        public string CoverImagePath { get; set; }
-    }
+    <Grid>
+        <!-- 中央內容 -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="20">
+            <!-- 專輯封面 -->
+            <Image Source="Assets/MichaelJackson.png" Width="250" Height="250" />
 
-    public class MusicPageViewModel : INotifyPropertyChanged
-    {
-        public ObservableCollection<MusicAlbum> AlbumList { get; set; }
+            <!-- 歌曲資訊 -->
+            <TextBlock Text="Beat It" Foreground="White" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Michael Jackson" Foreground="Gray" FontSize="18" HorizontalAlignment="Center"/>
 
-        private int _currentAlbumIndex;
-        public int CurrentAlbumIndex
-        {
-            get => _currentAlbumIndex;
-            set
-            {
-                if (_currentAlbumIndex != value)
-                {
-                    _currentAlbumIndex = value;
-                    OnPropertyChanged(nameof(CurrentAlbumIndex));
-                    OnPropertyChanged(nameof(CurrentAlbum));
-                }
-            }
-        }
+            <!-- 進度條 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,10,0,0">
+                <TextBlock Text="1:04" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <ProgressBar Width="400" Height="6" Value="30" Maximum="100" Foreground="DodgerBlue" Background="#333"/>
+                <TextBlock Text="3:52" Foreground="White" VerticalAlignment="Center" Margin="10,0,0,0"/>
+            </StackPanel>
 
-        public MusicAlbum CurrentAlbum => AlbumList[CurrentAlbumIndex];
-
-        public MusicPageViewModel()
-        {
-            AlbumList = new ObservableCollection<MusicAlbum>
-            {
-                new MusicAlbum { Artist = "周杰倫", SongName = "晴天", CoverImagePath = "/Assets/jay.png" },
-                new MusicAlbum { Artist = "周蕙", SongName = "好想好想", CoverImagePath = "/Assets/zhouhui.png" },
-                new MusicAlbum { Artist = "劉若英", SongName = "後來", CoverImagePath = "/Assets/rene.png" },
-            };
-
-            CurrentAlbumIndex = 0;
-        }
-
-        public void NextSong()
-        {
-            CurrentAlbumIndex = (CurrentAlbumIndex + 1) % AlbumList.Count;
-        }
-
-        public void PreviousSong()
-        {
-            CurrentAlbumIndex = (CurrentAlbumIndex - 1 + AlbumList.Count) % AlbumList.Count;
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-}
-```
-
-
-```xaml
-<UserControl x:Class="NovaCID.Views.MusicPage"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="clr-namespace:NovaCID.ViewModel"
-             Width="500" Height="500">
-
-    <UserControl.DataContext>
-        <vm:MusicPageViewModel/>
-    </UserControl.DataContext>
-
-    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Image Source="{Binding CurrentAlbum.CoverImagePath}" Width="200" Height="200" Margin="10"/>
-        <TextBlock Text="{Binding CurrentAlbum.Artist}" FontSize="20" Margin="5" HorizontalAlignment="Center"/>
-        <TextBlock Text="{Binding CurrentAlbum.SongName}" FontSize="16" Margin="5" HorizontalAlignment="Center"/> <!-- 修改這裡 -->
-
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
-            <Button Content="上一首" Click="PreviousSong_Click" Width="80" Margin="5"/>
-            <Button Content="下一首" Click="NextSong_Click" Width="80" Margin="5"/>
+            <!-- 播放控制按鈕 -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="30" Margin="0,10,0,0">
+                <Button Content="⏮" Width="60" Height="60" FontSize="24" Background="Transparent" Foreground="White" BorderBrush="Transparent"/>
+                <Button Content="▶" Width="60" Height="60" FontSize="24" Background="Transparent" Foreground="White" BorderBrush="Transparent"/>
+                <Button Content="⏭" Width="60" Height="60" FontSize="24" Background="Transparent" Foreground="White" BorderBrush="Transparent"/>
+            </StackPanel>
         </StackPanel>
-    </StackPanel>
-</UserControl>
-```
 
-```csharp
-using System.Windows;
-using System.Windows.Controls;
-using NovaCID.ViewModel;
+        <!-- 右側音量條 -->
+        <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,80,0">
+            <Slider Orientation="Vertical" Minimum="0" Maximum="100" Value="50" Width="40" Height="300"
+                    Foreground="DodgerBlue" Background="#333" 
+                    Style="{StaticResource {x:Static ToolBar.VerticalSliderStyleKey}}"/>
+            <TextBlock Text="🔊" Foreground="White" FontSize="24" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+        </StackPanel>
 
-namespace NovaCID.Views
-{
-    public partial class MusicPage : UserControl
-    {
-        public MusicPage()
-        {
-            InitializeComponent();
-        }
-
-        private void NextSong_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is MusicPageViewModel vm)
-            {
-                vm.NextSong();
-                System.Diagnostics.Debug.WriteLine($"[Music] 下一首：{vm.CurrentAlbum.Artist} - {vm.CurrentAlbum.SongName}");
-            }
-        }
-
-        private void PreviousSong_Click(object sender, RoutedEventArgs e)
-        {
-            if (DataContext is MusicPageViewModel vm)
-            {
-                vm.PreviousSong();
-                System.Diagnostics.Debug.WriteLine($"[Music] 上一首：{vm.CurrentAlbum.Artist} - {vm.CurrentAlbum.SongName}");
-            }
-        }
-    }
-}
-```
+    </Grid>
+</Window>
