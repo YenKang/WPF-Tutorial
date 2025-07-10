@@ -1,9 +1,18 @@
-<StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,80,0">
-    <Slider Orientation="Vertical" Minimum="0" Maximum="100"
-            Value="{Binding VolumeValue, Mode=TwoWay}" 
-            Width="40" Height="300" 
-            Foreground="DodgerBlue" Background="#333"/>
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
 
-    <TextBlock Text="🔊" Foreground="White" FontSize="26" 
-               HorizontalAlignment="Center" Margin="0,10,0,0"/>
-</StackPanel>
+public class PoiSideToAlignmentConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        var side = value as string;
+        return side == "left" ? HorizontalAlignment.Left : HorizontalAlignment.Right;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
