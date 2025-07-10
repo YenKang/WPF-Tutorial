@@ -1,18 +1,30 @@
-using System;
-using System.Globalization;
-using System.Windows;
-using System.Windows.Data;
-
-public class PoiSideToAlignmentConverter : IValueConverter
+```csharp
+public void OnDriverKnobRotated(KnobEvent e)
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-    {
-        var side = value as string;
-        return side == "left" ? HorizontalAlignment.Left : HorizontalAlignment.Right;
-    }
+    HandleKnobRotated(e);
+}
 
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+public void OnPassengerKnobRotated(KnobEvent e)
+{
+    HandleKnobRotated(e);
+}
+
+private void HandleKnobRotated(KnobEvent e)
+{
+    int delta = ComputeDelta(e.RawCounter, _previousRawCounter);
+    _previousRawCounter = e.RawCounter;
+
+    double tempChange = delta * 0.5;
+
+    if (e.KnobSide == Knob.Enums.KnobId.Left)
     {
-        throw new NotImplementedException();
+        LeftTemperature = Clamp(LeftTemperature + tempChange, min_TempLimit, max_TempLimit);
+        Debug.WriteLine($"旋鈕調整左側溫度：{LeftTemperature}");
+    }
+    else if (e.KnobSide == Knob.Enums.KnobId.Right)
+    {
+        RightTemperature = Clamp(RightTemperature + tempChange, min_TempLimit, max_TempLimit);
+        Debug.WriteLine($"旋鈕調整右側溫度：{RightTemperature}");
     }
 }
+````
