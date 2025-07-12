@@ -1,26 +1,54 @@
-xmlns:services="clr-namespace:YourProjectNamespace.Services"
-xmlns:conv="clr-namespace:YourProjectNamespace.Converters"
+<Button 
+    Content="模擬右 Knob Increase Temp" 
+    Command="{Binding SimulateRightKnobIncreaseTempCommand}" 
+    Width="220" 
+    Height="50" 
+    Margin="10"/>
 
 
-<Window.Resources>
-    <conv:KnobRoleToColorConverter x:Key="KnobRoleToColorConverter"/>
-    <conv:RoleToOpacityConverter x:Key="RoleToOpacityConverter"/>
-</Window.Resources>
+－－
+```csharp
+using System.Windows.Input;
 
-<Canvas>
-    <Ellipse
-        Width="372"
-        Height="372"
-        Canvas.Left="1949"  <!-- ⚠️ 右 Knob 的座標，依實際調整 -->
-        Canvas.Top="922"
-        Stroke="Transparent"
-        Fill="Transparent">
-        <Ellipse.Effect>
-            <DropShadowEffect 
-                Color="{Binding Source={x:Static services:KnobGlowStatus.Instance}, Path=RightKnobRole, Converter={StaticResource KnobRoleToColorConverter}}" 
-                BlurRadius="60"
-                ShadowDepth="0"
-                Opacity="{Binding Source={x:Static services:KnobGlowStatus.Instance}, Path=RightKnobRole, Converter={StaticResource RoleToOpacityConverter}}"/>
-        </Ellipse.Effect>
-    </Ellipse>
-</Canvas>
+namespace YourProjectNamespace.ViewModels
+{
+    public class ClimatePageViewModel : BaseViewModel
+    {
+        private int _rightTemperature = 22;
+        public int RightTemperature
+        {
+            get => _rightTemperature;
+            set
+            {
+                if (_rightTemperature != value)
+                {
+                    _rightTemperature = value;
+                    OnPropertyChanged(nameof(RightTemperature));
+                }
+            }
+        }
+
+        private readonly KnobEventRouter _knobEventRouter;
+
+        public ClimatePageViewModel()
+        {
+            _knobEventRouter = new KnobEventRouter();
+        }
+
+        public ICommand SimulateRightKnobIncreaseTempCommand => new RelayCommand(() =>
+        {
+            var knobEvent = new KnobEvent
+            {
+                TargetKnob = KnobType.Right,
+                EventType = KnobEventType.Rotate,
+                Role = KnobRole.Passenger,
+                IsRotated = true
+            };
+
+            _knobEventRouter.Route(knobEvent);
+
+            RightTemperature++;
+        });
+    }
+}
+```
