@@ -1,28 +1,30 @@
+using System.ComponentModel;
 
-using System;
-using System.Globalization;
-using System.Windows.Data;
-
-namespace YourNamespace.Converters // ← ⚠️ 記得換成你實際命名空間
+namespace YourProjectNamespace.Services // ⚠️ 改成實際命名空間
 {
-    public class VolumeToTopConverter : IValueConverter
+    public class KnobGlowStatus : INotifyPropertyChanged
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        private static readonly KnobGlowStatus _instance = new KnobGlowStatus();
+        public static KnobGlowStatus Instance => _instance;
+
+        private KnobRole _rightKnobRole = KnobRole.None;
+        public KnobRole RightKnobRole
         {
-            double sliderHeight = 400; // 一定要跟你的 XAML Slider 高度一致
-            double min = 0;
-            double max = 10;
-
-            double v = System.Convert.ToDouble(value);
-            double ratio = (v - min) / (max - min);
-            double top = (1 - ratio) * sliderHeight;
-
-            return top;
+            get => _rightKnobRole;
+            set
+            {
+                if (_rightKnobRole != value)
+                {
+                    _rightKnobRole = value;
+                    OnPropertyChanged(nameof(RightKnobRole));
+                }
+            }
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public event PropertyChangedEventHandler PropertyChanged;
+        protected void OnPropertyChanged(string propertyName)
         {
-            throw new NotImplementedException();
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
