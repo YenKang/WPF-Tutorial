@@ -1,30 +1,48 @@
-using System.ComponentModel;
+using System;
+using System.Globalization;
+using System.Windows.Data;
+using System.Windows.Media;
 
-namespace YourProjectNamespace.Services // ⚠️ 改成實際命名空間
+namespace YourProjectNamespace.Converters
 {
-    public class KnobGlowStatus : INotifyPropertyChanged
+    public class KnobRoleToColorConverter : IValueConverter
     {
-        private static readonly KnobGlowStatus _instance = new KnobGlowStatus();
-        public static KnobGlowStatus Instance => _instance;
-
-        private KnobRole _rightKnobRole = KnobRole.None;
-        public KnobRole RightKnobRole
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            get => _rightKnobRole;
-            set
+            if (value is KnobRole role && role != KnobRole.None)
             {
-                if (_rightKnobRole != value)
-                {
-                    _rightKnobRole = value;
-                    OnPropertyChanged(nameof(RightKnobRole));
-                }
+                return Colors.DeepSkyBlue; // ✅ 可改成想要的 Glow 顏色
             }
+            return Colors.Transparent;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged(string propertyName)
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            throw new NotImplementedException();
+        }
+    }
+}
+
+
+=========
+
+using System;
+using System.Globalization;
+using System.Windows;
+using System.Windows.Data;
+
+namespace YourProjectNamespace.Converters
+{
+    public class RoleToOpacityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return (value is KnobRole role && role != KnobRole.None) ? 1.0 : 0.0;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
         }
     }
 }
