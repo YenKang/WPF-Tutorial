@@ -1,48 +1,18 @@
-using System;
-using System.Globalization;
-using System.Windows.Data;
-using System.Windows.Media;
-
-namespace YourProjectNamespace.Converters
+private void UpdateGlowStatus(KnobEvent knobEvent)
 {
-    public class KnobRoleToColorConverter : IValueConverter
+    if (knobEvent.TargetKnob == KnobType.Right)
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        if (knobEvent.IsTouched || knobEvent.IsRotated || knobEvent.IsPressed)
         {
-            if (value is KnobRole role && role != KnobRole.None)
-            {
-                return Colors.DeepSkyBlue; // ✅ 可改成想要的 Glow 顏色
-            }
-            return Colors.Transparent;
+            KnobGlowStatus.Instance.RightKnobRole = knobEvent.Role;
         }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        else
         {
-            throw new NotImplementedException();
+            KnobGlowStatus.Instance.RightKnobRole = KnobRole.None;
         }
     }
-}
-
-
-=========
-
-using System;
-using System.Globalization;
-using System.Windows;
-using System.Windows.Data;
-
-namespace YourProjectNamespace.Converters
-{
-    public class RoleToOpacityConverter : IValueConverter
+    else if (knobEvent.TargetKnob == KnobType.Left)
     {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return (value is KnobRole role && role != KnobRole.None) ? 1.0 : 0.0;
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
+        // 未來 Left Knob 的 Glow 更新邏輯可放這
     }
 }
