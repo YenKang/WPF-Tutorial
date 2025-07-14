@@ -1,34 +1,30 @@
-
 ```xml
-<StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20,0,0">
-    <Button
-        Content="➕ Increase Right Fan"
-        Command="{Binding IncreaseRightFanLevelCommand}"
-        Width="220"
-        Height="60"
-        Margin="0,10,0,0"/>
+<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
 
-    <Button
-        Content="➖ Decrease Right Fan"
-        Command="{Binding DecreaseRightFanLevelCommand}"
-        Width="220"
+    <!-- Fan Icon -->
+    <Image
+        Source="/Assets/fan_icon.png" <!-- 這裡換成你剛剛生成的 icon 路徑 -->
+        Width="60"
         Height="60"
-        Margin="0,10,0,0"/>
+        HorizontalAlignment="Center"
+        Margin="0,0,0,20"/>
+
+    <!-- Fan Level Slider -->
+    <Slider
+        Orientation="Vertical"
+        Minimum="0"
+        Maximum="5"
+        Value="{Binding RightFanLevel}"
+        Width="80"
+        Height="300"
+        HorizontalAlignment="Center"
+        Margin="0,0,0,20"/>
+
+    <!-- Temperature Text -->
+    <TextBlock
+        Text="{Binding RightTemperature, StringFormat='{}{0:0.0}°C'}"
+        Foreground="White"
+        FontSize="36"
+        HorizontalAlignment="Center"/>
 </StackPanel>
-```
-
-－－－
-
-```chsarp
-public ICommand IncreaseRightFanLevelCommand => new RelayCommand(() =>
-{
-    if (RightFanLevel < 5)
-        RightFanLevel++;
-});
-
-public ICommand DecreaseRightFanLevelCommand => new RelayCommand(() =>
-{
-    if (RightFanLevel > 0)
-        RightFanLevel--;
-});
 ```
