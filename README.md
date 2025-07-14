@@ -1,3 +1,5 @@
+
+```xml
 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,20,0,0">
     <Button
         Content="➕ Increase Right Fan"
@@ -13,7 +15,7 @@
         Height="60"
         Margin="0,10,0,0"/>
 </StackPanel>
-
+```
 
 －－－
 
