@@ -5,23 +5,27 @@
         Width="100"
         Height="400"
         HorizontalAlignment="Center">
-
-    <Slider.Resources>
-        <Style TargetType="Thumb">
-            <!-- 先改 Template -->
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Thumb">
-                        <Ellipse Fill="LightSkyBlue"
-                                 Stroke="White"
-                                 StrokeThickness="2"/>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <!-- 設定圓形尺寸 -->
-            <Setter Property="Width" Value="60"/>
-            <Setter Property="Height" Value="60"/>
-        </Style>
-    </Slider.Resources>
-
+    <Slider.Template>
+        <ControlTemplate TargetType="Slider">
+            <Grid>
+                <Track x:Name="PART_Track"
+                       IsDirectionReversed="true"
+                       Minimum="{TemplateBinding Minimum}"
+                       Maximum="{TemplateBinding Maximum}"
+                       Value="{TemplateBinding Value}">
+                    <Track.Thumb>
+                        <Thumb Width="60" Height="60">
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Ellipse Fill="LightSkyBlue"
+                                             Stroke="White"
+                                             StrokeThickness="2"/>
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
+                    </Track.Thumb>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+    </Slider.Template>
 </Slider>
