@@ -1,19 +1,44 @@
-<Grid Height="400" Width="120">
-    <!-- Track 背景 -->
-    <Border Width="30" Background="#333" CornerRadius="15" HorizontalAlignment="Center"/>
+<Slider Orientation="Vertical"
+        Minimum="0"
+        Maximum="10"
+        Value="{Binding VolumeValue, Mode=TwoWay}"
+        Width="120"
+        Height="400"
+        HorizontalAlignment="Center">
 
-    <!-- 進度條 -->
-    <Rectangle Width="30"
-               Fill="DodgerBlue"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Bottom"
-               Height="{Binding VolumeValue, Converter={StaticResource ValueToHeightConverter}}"/>
+    <Slider.Template>
+        <ControlTemplate TargetType="Slider">
+            <Grid>
+                <Track x:Name="PART_Track"
+                       Minimum="{TemplateBinding Minimum}"
+                       Maximum="{TemplateBinding Maximum}"
+                       Value="{TemplateBinding Value}"
+                       IsDirectionReversed="False">
 
-    <!-- 自訂 Thumb -->
-    <Ellipse Width="60" Height="60"
-             Fill="LightSkyBlue"
-             Stroke="White"
-             StrokeThickness="2"
-             HorizontalAlignment="Center"
-             Margin="0,{Binding VolumeValue, Converter={StaticResource ValueToTopMarginConverter}},0,0"/>
-</Grid>
+                    <!-- 已填滿區域 -->
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Background="DodgerBlue" IsEnabled="False" Height="0"/>
+                    </Track.DecreaseRepeatButton>
+
+                    <!-- Thumb -->
+                    <Track.Thumb>
+                        <Thumb Width="60" Height="60">
+                            <Thumb.Template>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Ellipse Fill="LightSkyBlue"
+                                             Stroke="White"
+                                             StrokeThickness="2"/>
+                                </ControlTemplate>
+                            </Thumb.Template>
+                        </Thumb>
+                    </Track.Thumb>
+
+                    <!-- 尚未填滿區域 -->
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Background="#333" IsEnabled="False" Height="0"/>
+                    </Track.IncreaseRepeatButton>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+    </Slider.Template>
+</Slider>
