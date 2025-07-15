@@ -8,19 +8,22 @@
 
     <Slider.Template>
         <ControlTemplate TargetType="Slider">
-            <Grid HorizontalAlignment="Center">
-                <!-- 背景軌道（灰色） -->
+            <Grid>
+                <!-- 背景 -->
                 <Border Width="30" Background="#333" CornerRadius="15"/>
 
                 <!-- Track -->
                 <Track x:Name="PART_Track"
-                       IsDirectionReversed="true"
+                       IsDirectionReversed="False" <!-- ✅ 這裡改成 False -->
                        Minimum="{TemplateBinding Minimum}"
                        Maximum="{TemplateBinding Maximum}"
                        Value="{TemplateBinding Value}"
                        Width="30">
+                    
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Command="Slider.DecreaseLarge" Background="DodgerBlue" />
+                    </Track.DecreaseRepeatButton>
 
-                    <!-- Thumb -->
                     <Track.Thumb>
                         <Thumb Width="60" Height="60">
                             <Thumb.Template>
@@ -32,6 +35,10 @@
                             </Thumb.Template>
                         </Thumb>
                     </Track.Thumb>
+
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Command="Slider.IncreaseLarge" Background="Transparent" />
+                    </Track.IncreaseRepeatButton>
                 </Track>
             </Grid>
         </ControlTemplate>
