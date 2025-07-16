@@ -1,44 +1,4 @@
-<Slider Orientation="Vertical"
-        Minimum="0"
-        Maximum="10"
-        Value="{Binding VolumeValue, Mode=TwoWay}"
-        Width="120"
-        Height="400"
-        HorizontalAlignment="Center">
+我現在poi card 有一個問題, 當我按left knob, 卡片從左邊跳出來。
 
-    <Slider.Template>
-        <ControlTemplate TargetType="Slider">
-            <Grid>
-                <Track x:Name="PART_Track"
-                       Minimum="{TemplateBinding Minimum}"
-                       Maximum="{TemplateBinding Maximum}"
-                       Value="{TemplateBinding Value}"
-                       IsDirectionReversed="False">
-
-                    <!-- 已填滿區域 -->
-                    <Track.DecreaseRepeatButton>
-                        <RepeatButton Background="DodgerBlue" IsEnabled="False" Height="0"/>
-                    </Track.DecreaseRepeatButton>
-
-                    <!-- Thumb -->
-                    <Track.Thumb>
-                        <Thumb Width="60" Height="60">
-                            <Thumb.Template>
-                                <ControlTemplate TargetType="Thumb">
-                                    <Ellipse Fill="LightSkyBlue"
-                                             Stroke="White"
-                                             StrokeThickness="2"/>
-                                </ControlTemplate>
-                            </Thumb.Template>
-                        </Thumb>
-                    </Track.Thumb>
-
-                    <!-- 尚未填滿區域 -->
-                    <Track.IncreaseRepeatButton>
-                        <RepeatButton Background="#333" IsEnabled="False" Height="0"/>
-                    </Track.IncreaseRepeatButton>
-                </Track>
-            </Grid>
-        </ControlTemplate>
-    </Slider.Template>
-</Slider>
+再來我按右邊knob, 卡片竟然從右邊跳出來。
+這是不對的，因為按下右邊knob 應該不會有反應才對
