@@ -1,37 +1,32 @@
-public void OnLeftKnobRotated(int delta)
+// MusicPageViewModel.cs
+public class MusicPageViewModel : INotifyPropertyChanged
 {
-    if (delta > 0)
+    private readonly NovaCIDViewModel _mainVM;
+
+    public MusicPageViewModel(NovaCIDViewModel mainViewModel)
     {
-        NextSong();
-    }
-    else if (delta < 0)
-    {
-        PreviousSong();
+        _mainVM = mainViewModel;
     }
 
-    // 設定圖片路徑（你的 icon 檔名請自行調整）
-    LeftKnobInnerImage = "/Assets/switch_song_icon.png";
-    IsLeftKnobInnerVisible = true;
+    public ICommand ShowLeftKnobInnerCommand => new RelayCommand(ShowLeftKnobInnerImage);
 
-    // 自動延遲 500ms 消失
-    Task.Delay(500).ContinueWith(_ =>
+    private void ShowLeftKnobInnerImage()
     {
-        IsLeftKnobInnerVisible = false;
-    }, TaskScheduler.FromCurrentSynchronizationContext());
+        _mainVM.LeftKnobInnerImage = "/Assets/music_switch_icon.png";
+        _mainVM.IsLeftKnobInnerVisible = true;
+    }
+
+    // ... 實作 INotifyPropertyChanged
 }
 
-<Canvas x:Name="leftKnobInner"
-        Width="2560"  <!-- 整個畫布總寬，可依實際螢幕調整 -->
-        Height="1440"> <!-- 整個畫布總高，可依實際螢幕調整 -->
 
-    <!-- Knob 背景，可依實際需求放 -->
-    <!-- <Ellipse Fill="Gray" Width="300" Height="300" Canvas.Left="..." Canvas.Top="..."/> -->
+<Button Content="顯示切歌圖示"
+        Command="{Binding ShowLeftKnobInnerCommand}" />
 
-    <!-- 切換歌曲 icon -->
-    <Image Source="{Binding LeftKnobInnerImage}"
-           Width="220"
-           Height="220"
-           Visibility="{Binding IsLeftKnobInnerVisible, Converter={StaticResource BoolToVis}}"
-           Canvas.Left="313"
-           Canvas.Top="1020"/>
-</Canvas>
+
+<Image Source="{Binding LeftKnobInnerImage}"
+       Width="220"
+       Height="220"
+       Visibility="{Binding IsLeftKnobInnerVisible, Converter={StaticResource BoolToVis}}"
+       HorizontalAlignment="Center"
+       VerticalAlignment="Center"/>
