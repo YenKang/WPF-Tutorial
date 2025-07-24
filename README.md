@@ -1,25 +1,29 @@
-<Canvas x:Name="KnobCanvas">
-    <!-- 0° -->
-    <Line X1="423" Y1="1130" X2="423" Y2="1080"
-          Stroke="LimeGreen" StrokeThickness="4" />
+<!-- 刻度線：0° -->
+<Line X1="423" Y1="944" X2="423" Y2="964"
+      Stroke="LimeGreen" StrokeThickness="4"
+      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
 
-    <!-- 60° -->
-    <Line X1="423" Y1="1130" X2="466.3" Y2="1090"
-          Stroke="LimeGreen" StrokeThickness="4" />
+<!-- 刻度線：60° -->
+<Line X1="566.1" Y1="1013.7" X2="549.5" Y2="1028.3"
+      Stroke="LimeGreen" StrokeThickness="4"
+      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
 
-    <!-- 120° -->
-    <Line X1="423" Y1="1130" X2="466.3" Y2="1170"
-          Stroke="LimeGreen" StrokeThickness="4" />
+<!-- 刻度線：120° -->
+<Line X1="566.1" Y1="1246.3" X2="549.5" Y2="1231.7"
+      Stroke="LimeGreen" StrokeThickness="4"
+      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
 
-    <!-- 180° -->
-    <Line X1="423" Y1="1130" X2="423" Y2="1180"
-          Stroke="LimeGreen" StrokeThickness="4" />
+<!-- 刻度線：180° -->
+<Line X1="423" Y1="1316" X2="423" Y2="1296"
+      Stroke="LimeGreen" StrokeThickness="4"
+      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
 
-    <!-- 240° -->
-    <Line X1="423" Y1="1130" X2="379.7" Y2="1170"
-          Stroke="LimeGreen" StrokeThickness="4" />
+<!-- 刻度線：240° -->
+<Line X1="279.9" Y1="1246.3" X2="296.5" Y2="1231.7"
+      Stroke="LimeGreen" StrokeThickness="4"
+      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
 
-    <!-- 300° -->
-    <Line X1="423" Y1="1130" X2="379.7" Y2="1090"
-          Stroke="LimeGreen" StrokeThickness="4" />
-</Canvas>
+<!-- 刻度線：300° -->
+<Line X1="279.9" Y1="1013.7" X2="296.5" Y2="1028.3"
+      Stroke="LimeGreen" StrokeThickness="4"
+      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
