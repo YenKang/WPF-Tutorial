@@ -1,29 +1,23 @@
-<!-- 刻度線：0° -->
-<Line X1="423" Y1="984" X2="423" Y2="944"
-      Stroke="LimeGreen" StrokeThickness="4"
-      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+<!-- 0° -->
+<Line X1="2320.5" Y1="1130" X2="2360.5" Y2="1130"
+      Stroke="White" StrokeThickness="4"/>
 
-<!-- 刻度線：60° -->
-<Line X1="540.4" Y1="1038.2" X2="566.1" Y2="1013.7"
-      Stroke="LimeGreen" StrokeThickness="4"
-      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+<!-- 60° -->
+<Line X1="2227.75" Y1="969.3" X2="2247.75" Y2="934.5"
+      Stroke="White" StrokeThickness="4"/>
 
-<!-- 刻度線：120° -->
-<Line X1="540.4" Y1="1221.8" X2="566.1" Y2="1246.3"
-      Stroke="LimeGreen" StrokeThickness="4"
-      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+<!-- 120° -->
+<Line X1="2042.25" Y1="969.3" X2="2012.25" Y2="934.5"
+      Stroke="White" StrokeThickness="4"/>
 
-<!-- 刻度線：180° -->
-<Line X1="423" Y1="1276" X2="423" Y2="1316"
-      Stroke="LimeGreen" StrokeThickness="4"
-      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+<!-- 180° -->
+<Line X1="1949.5" Y1="1130" X2="1909.5" Y2="1130"
+      Stroke="White" StrokeThickness="4"/>
 
-<!-- 刻度線：240° -->
-<Line X1="305.6" Y1="1221.8" X2="279.9" Y2="1246.3"
-      Stroke="LimeGreen" StrokeThickness="4"
-      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+<!-- 240° -->
+<Line X1="2042.25" Y1="1290.7" X2="2012.25" Y2="1325.5"
+      Stroke="White" StrokeThickness="4"/>
 
-<!-- 刻度線：300° -->
-<Line X1="305.6" Y1="1038.2" X2="279.9" Y2="1013.7"
-      Stroke="LimeGreen" StrokeThickness="4"
-      StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
+<!-- 300° -->
+<Line X1="2227.75" Y1="1290.7" X2="2247.75" Y2="1325.5"
+      Stroke="White" StrokeThickness="4"/>
