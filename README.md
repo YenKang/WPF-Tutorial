@@ -1,19 +1,28 @@
-<Canvas>
-  <!-- 刻度 0° -->
-  <Line X1="423" Y1="944" X2="423" Y2="904" Stroke="White" StrokeThickness="2"/>
+<!-- LeftKnobTick -->
+<Canvas x:Name="LeftKnobTick">
 
-  <!-- 刻度 60° -->
-  <Line X1="516" Y1="970" X2="536" Y2="935" Stroke="White" StrokeThickness="2"/>
+  <!-- 0° -->
+  <Line X1="608.5" Y1="1130" X2="648.5" Y2="1130"
+        Stroke="White" StrokeThickness="4"/>
 
-  <!-- 刻度 120° -->
-  <Line X1="516" Y1="1290" X2="536" Y2="1325" Stroke="White" StrokeThickness="2"/>
+  <!-- 60° -->
+  <Line X1="515.75" Y1="969.3" X2="535.75" Y2="934.5"
+        Stroke="White" StrokeThickness="4"/>
 
-  <!-- 刻度 180° -->
-  <Line X1="423" Y1="1316" X2="423" Y2="1356" Stroke="White" StrokeThickness="2"/>
+  <!-- 120° -->
+  <Line X1="330.25" Y1="969.3" X2="300.25" Y2="934.5"
+        Stroke="White" StrokeThickness="4"/>
 
-  <!-- 刻度 240° -->
-  <Line X1="330" Y1="1290" X2="310" Y2="1325" Stroke="White" StrokeThickness="2"/>
+  <!-- 180° -->
+  <Line X1="237.5" Y1="1130" X2="197.5" Y2="1130"
+        Stroke="White" StrokeThickness="4"/>
 
-  <!-- 刻度 300° -->
-  <Line X1="330" Y1="970" X2="310" Y2="935" Stroke="White" StrokeThickness="2"/>
+  <!-- 240° -->
+  <Line X1="330.25" Y1="1290.7" X2="300.25" Y2="1325.5"
+        Stroke="White" StrokeThickness="4"/>
+
+  <!-- 300° -->
+  <Line X1="515.75" Y1="1290.7" X2="535.75" Y2="1325.5"
+        Stroke="White" StrokeThickness="4"/>
+
 </Canvas>
