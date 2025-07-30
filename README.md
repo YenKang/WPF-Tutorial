@@ -1,28 +1,14 @@
-<!-- LeftKnobTick -->
-<Canvas x:Name="LeftKnobTick">
+public string FilterRawDataByPrefix(string rawInput, string prefix)
+{
+    if (string.IsNullOrWhiteSpace(rawInput))
+        return string.Empty;
 
-  <!-- 0° -->
-  <Line X1="608.5" Y1="1130" X2="648.5" Y2="1130"
-        Stroke="White" StrokeThickness="4"/>
+    var lines = rawInput
+        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+        .Where(line => line.StartsWith(prefix));
 
-  <!-- 60° -->
-  <Line X1="515.75" Y1="969.3" X2="535.75" Y2="934.5"
-        Stroke="White" StrokeThickness="4"/>
+    return string.Join(Environment.NewLine, lines);
+}
 
-  <!-- 120° -->
-  <Line X1="330.25" Y1="969.3" X2="300.25" Y2="934.5"
-        Stroke="White" StrokeThickness="4"/>
-
-  <!-- 180° -->
-  <Line X1="237.5" Y1="1130" X2="197.5" Y2="1130"
-        Stroke="White" StrokeThickness="4"/>
-
-  <!-- 240° -->
-  <Line X1="330.25" Y1="1290.7" X2="300.25" Y2="1325.5"
-        Stroke="White" StrokeThickness="4"/>
-
-  <!-- 300° -->
-  <Line X1="515.75" Y1="1290.7" X2="535.75" Y2="1325.5"
-        Stroke="White" StrokeThickness="4"/>
-
-</Canvas>
+FilterRawDataByPrefix(rawData, "Knob_");
+FilterRawDataByPrefix(rawData, "Finger_");
