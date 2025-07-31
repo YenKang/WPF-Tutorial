@@ -33,3 +33,4 @@ public partial class DrivePageViewModel : IFingerHandler
         return (x >= 1400 && x <= 1500 && y >= 1000 && y <= 1100);
     }
 }
+
