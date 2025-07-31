@@ -38,3 +38,42 @@ private Rect GetButtonArea(FrameworkElement button)
     return new Rect(topLeft, bottomRight);
 }
 ```
+
+## Step3: DrivePage_Loaded 時設定按鈕範圍
+
+```chsarp
+private void DrivePage_Loaded(object sender, RoutedEventArgs e)
+{
+    var vm = new DrivePageViewModel(App.Current.MainVM);
+    this.DataContext = vm;
+
+    var zoomInRect = GetButtonArea(ZoomInButton);
+    var zoomOutRect = GetButtonArea(ZoomOutButton);
+    vm.SetZoomButtons(zoomInRect, zoomOutRect);
+}
+```
+
+## Step4:
+
+```csharp
+public void OnFingerTouch(List<FingerStatus> fingers)
+{
+    foreach (var finger in fingers)
+    {
+        if (!finger.Driver) continue;
+
+        var point = new Point(finger.X, finger.Y);
+
+        if (IsTouchingZoomIn((int)point.X, (int)point.Y))
+        {
+            ZoomLevel++;
+            UpdateMap();
+        }
+        else if (IsTouchingZoomOut((int)point.X, (int)point.Y))
+        {
+            ZoomLevel--;
+            UpdateMap();
+        }
+    }
+}
+```
