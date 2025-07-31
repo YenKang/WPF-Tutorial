@@ -9,3 +9,10 @@ NovaCIDViewModel
          └── MusicPageViewModel.OnFingerTouch()
 
 
+private void DrivePage_Loaded(object sender, RoutedEventArgs e)
+{
+    // 建立 ViewModel，傳入 Zoom 按鈕元件
+    var vm = new DrivePageViewModel(App.Current.MainVM);
+    vm.SetZoomButtons(ZoomInButton, ZoomOutButton); // 你剛剛做的 public 方法
+    this.DataContext = vm;
+}
