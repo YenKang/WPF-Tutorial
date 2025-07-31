@@ -1,21 +1,13 @@
-<Canvas Width="2560" Height="1440" Background="Black">
-    <!-- Zoom In Button -->
-    <Button x:Name="ZoomInBtn"
-            Content="Zoom In"
-            Width="{Binding ZoomInWidth}"
-            Height="{Binding ZoomInHeight}"
-            Canvas.Left="{Binding ZoomInX}"
-            Canvas.Top="{Binding ZoomInY}"
-            FontSize="40"
-            CommandParameter="+1"
-            Command="{Binding ClickToSetZoomLevelCommand}" />
+if (IsInButtonArea(p, ZoomInBtnX, ZoomInBtnY, ZoomInWidth, ZoomInHeight))
+{
+    ExecuteZoomIn();
+}
+else if (IsInButtonArea(p, ZoomOutBtnX, ZoomOutBtnY, ZoomOutWidth, ZoomOutHeight))
+{
+    ExecuteZoomOut();
+}
 
-    <!-- 校正框：可選 -->
-    <Rectangle Width="{Binding ZoomInWidth}"
-               Height="{Binding ZoomInHeight}"
-               Canvas.Left="{Binding ZoomInX}"
-               Canvas.Top="{Binding ZoomInY}"
-               Stroke="Lime"
-               StrokeThickness="2"
-               Fill="Transparent" />
-</Canvas>
+private bool IsInButtonArea(Point p, double x, double y, double width, double height)
+{
+    return new Rect(x, y, width, height).Contains(p);
+}
