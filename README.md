@@ -1,18 +1,40 @@
-NovaCIDViewModel
-│
-├─ Raw data 進來 → FingerEventProcessor.Parse() → List<FingerStatus>
-│
-├─ IFingerEventRouter.Route(List<FingerStatus>)
-│
-└─ (根據 CurrentPage 轉發給實作了 IFingerHandler 的 Page ViewModel)
-         └── DrivePageViewModel.OnFingerTouch()
-         └── MusicPageViewModel.OnFingerTouch()
+## Step1
 
+```csharp
+// ✅ ViewModel 內部只存範圍
+private Rect _zoomInArea;
+private Rect _zoomOutArea;
 
-private void DrivePage_Loaded(object sender, RoutedEventArgs e)
+public void SetZoomButtons(Rect zoomInArea, Rect zoomOutArea)
 {
-    // 建立 ViewModel，傳入 Zoom 按鈕元件
-    var vm = new DrivePageViewModel(App.Current.MainVM);
-    vm.SetZoomButtons(ZoomInButton, ZoomOutButton); // 你剛剛做的 public 方法
-    this.DataContext = vm;
+    _zoomInArea = zoomInArea;
+    _zoomOutArea = zoomOutArea;
 }
+
+// ✅ 判斷是否在 ZoomIn 區域
+private bool IsTouchingZoomIn(int x, int y)
+{
+    return _zoomInArea.Contains(new Point(x, y));
+}
+
+// ✅ 判斷是否在 ZoomOut 區域
+private bool IsTouchingZoomOut(int x, int y)
+{
+    return _zoomOutArea.Contains(new Point(x, y));
+}
+```
+
+
+## Step2: View (code behind)
+
+```csharp
+private Rect GetButtonArea(FrameworkElement button)
+{
+    var topLeft = button.TranslatePoint(new Point(0, 0), Application.Current.MainWindow);
+    var bottomRight = button.TranslatePoint(
+        new Point(button.ActualWidth, button.ActualHeight),
+        Application.Current.MainWindow);
+
+    return new Rect(topLeft, bottomRight);
+}
+```
