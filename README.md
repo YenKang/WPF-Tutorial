@@ -1,8 +1,15 @@
-public void SetZoomButtons(Rect zoomInArea, Rect zoomOutArea)
+public partial class App : Application
 {
-    _zoomInArea = zoomInArea;
-    _zoomOutArea = zoomOutArea;
+    public NovaCIDViewModel MainVM { get; private set; }
 
-    Console.WriteLine($"[Debug] ZoomInArea: X={_zoomInArea.X}, Y={_zoomInArea.Y}, W={_zoomInArea.Width}, H={_zoomInArea.Height}");
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+
+        MainVM = new NovaCIDViewModel();
+
+        var mainWindow = new MainWindow();
+        mainWindow.DataContext = MainVM;
+        mainWindow.Show();
+    }
 }
-
