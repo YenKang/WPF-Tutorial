@@ -1,25 +1,30 @@
+// /Finger/FingerEventProcessor.cs
+using System.Collections.Generic;
 
-
-public class FingerStatus
+public class FingerEventProcessor
 {
-    public int FingerId { get; set; }
-    public bool IsDriver { get; set; }
-    public string Status { get; set; } // 目前是 None
-    public int X { get; set; }
-    public int Y { get; set; }
+    private readonly Dictionary<string, FingerStatus> _fingerStatusMap = new();
 
-    public static FingerStatus Parse(string line)
+    public List<FingerStatus> Parse(string rawData)
     {
-        // 範例行：Finger_0, Driver=False, Status=None, X=1346, Y=1046
-        var parts = line.Split(',');
+        var result = new List<FingerStatus>();
+        if (string.IsNullOrWhiteSpace(rawData))
+            return result;
 
-        return new FingerStatus
+        string[] lines = rawData.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var line in lines)
         {
-            FingerId = int.Parse(parts[0].Split('_')[1]),
-            IsDriver = parts[1].Split('=')[1].Trim() == "True",
-            Status = parts[2].Split('=')[1].Trim(),
-            X = int.Parse(parts[3].Split('=')[1]),
-            Y = int.Parse(parts[4].Split('=')[1])
-        };
+            if (line.StartsWith("Finger_"))
+            {
+                var finger = FingerStatus.Parse(line);
+                result.Add(finger);
+
+                // 可以選擇這邊做後續狀態記憶與比較
+                _fingerStatusMap[finger.Id] = finger.Clone(); // 或後續判斷差異再處理
+            }
+        }
+
+        return result;
     }
 }
