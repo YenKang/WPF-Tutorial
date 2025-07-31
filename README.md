@@ -1,30 +1,35 @@
-// /Finger/FingerEventProcessor.cs
+
+
+// /ViewModel/DrivePageViewModel.cs
 using System.Collections.Generic;
 
-public class FingerEventProcessor
+public partial class DrivePageViewModel : IFingerHandler
 {
-    private readonly Dictionary<string, FingerStatus> _fingerStatusMap = new();
-
-    public List<FingerStatus> Parse(string rawData)
+    public void OnFingerTouched(List<FingerStatus> fingers)
     {
-        var result = new List<FingerStatus>();
-        if (string.IsNullOrWhiteSpace(rawData))
-            return result;
-
-        string[] lines = rawData.Split(new[] { '\r', '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var line in lines)
+        foreach (var finger in fingers)
         {
-            if (line.StartsWith("Finger_"))
-            {
-                var finger = FingerStatus.Parse(line);
-                result.Add(finger);
+            if (!finger.IsDriver) continue;
 
-                // 可以選擇這邊做後續狀態記憶與比較
-                _fingerStatusMap[finger.Id] = finger.Clone(); // 或後續判斷差異再處理
+            if (IsInsideZoomInButton(finger.X, finger.Y))
+            {
+                ZoomLevel++;
+            }
+            else if (IsInsideZoomOutButton(finger.X, finger.Y))
+            {
+                ZoomLevel--;
             }
         }
+    }
 
-        return result;
+    private bool IsInsideZoomInButton(int x, int y)
+    {
+        // TODO: 根據 Zoom In Button 的邊界位置實作
+        return (x >= 1200 && x <= 1300 && y >= 1000 && y <= 1100);
+    }
+
+    private bool IsInsideZoomOutButton(int x, int y)
+    {
+        return (x >= 1400 && x <= 1500 && y >= 1000 && y <= 1100);
     }
 }
