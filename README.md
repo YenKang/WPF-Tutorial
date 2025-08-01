@@ -1,28 +1,18 @@
-public void ProcessFingerEvents(List<FingerStatus> fingersList)
+public static class SettingsLoader
 {
-    foreach (var current in fingersList)
+    public static AppSettings Load(string filePath)
     {
-        int id = current.Id;
+        if (!File.Exists(filePath)) return new AppSettings();
 
-        // 取得上一筆狀態
-        _fingerStatusMap.TryGetValue(id, out var previous);
-
-        // Debug 印出前後狀態
-        Debug.WriteLine($"🧠 FingerId={id}, Prev={previous?.Status}, Now={current.Status}");
-
-        // 定義：從 None ➜ Move 才算一次 Click
-        if ((previous == null || previous.Status == "None") && current.Status == "Move")
+        var xml = XElement.Load(filePath);
+        return new AppSettings
         {
-            Debug.WriteLine($"✅ Finger {id} 被視為一次 Click");
-
-            // 你可以在這裡進行 Click 邏輯，例如：
-            HandleFingerClick(current);
-        }
-
-        // 更新 Map 中該筆資料
-        _fingerStatusMap[id] = current;
+            KnobEnabled = ParseBoolFromInt(xml.Element("KnobEnabled")?.Value)
+        };
     }
 
-    // Optional: 移除已消失的手指 id
-    CleanupFingerMap(fingersList);
+    private static bool ParseBoolFromInt(string? value)
+    {
+        return int.TryParse(value, out int result) && result == 1;
+    }
 }
