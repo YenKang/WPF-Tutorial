@@ -1,3 +1,17 @@
+[View] 點了 Zoom In
+   ↓
+[ViewModel] ZoomInCommand() → ZoomLevel += 0.1
+   ↓
+[ViewModel] set ZoomLevel {
+    → 修改 Model.ZoomLevel
+    → OnPropertyChanged()
+}
+   ↓
+[View] 自動更新 TextBlock 顯示
+
+
+
+
 ```CSHARP
 public class DrivePageViewModel : INotifyPropertyChanged
 {
