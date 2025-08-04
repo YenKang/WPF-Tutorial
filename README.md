@@ -1,30 +1,23 @@
-<Grid Width="Auto" Height="Auto" Background="LightGray" Margin="20">
-    <Grid.RowDefinitions>
-        <RowDefinition Height="250"/> <!-- 上方綠色區塊 -->
-        <RowDefinition Height="300"/> <!-- 下方藍色區 + 兩個圓形 -->
-    </Grid.RowDefinitions>
+<!-- 中間藍色長方形（包含功能 icon）-->
+<Border Grid.Column="1" Background="DodgerBlue" Height="100" CornerRadius="12"
+        HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="20,0" Padding="20">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="40">
+        <!-- Music -->
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+            <Image Source="/Assets/icon_music.png" Width="32" Height="32" HorizontalAlignment="Center"/>
+            <TextBlock Text="Music" Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+        </StackPanel>
 
-    <!-- 上半區域：綠色長方形 -->
-    <Border Grid.Row="0" Background="LightGreen" Margin="20" CornerRadius="20" />
+        <!-- Drive -->
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+            <Image Source="/Assets/icon_drive.png" Width="32" Height="32" HorizontalAlignment="Center"/>
+            <TextBlock Text="Drive" Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+        </StackPanel>
 
-    <!-- 下半區域：三欄配置 -->
-    <Grid Grid.Row="1" Margin="20">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="200"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- 左旋鈕 -->
-        <Ellipse Grid.Column="0" Fill="DarkGray" Width="120" Height="120" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
-        <!-- 中間藍色長方形 -->
-        <Border Grid.Column="1" Background="DodgerBlue" Height="80" CornerRadius="12"
-                HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="20,0"/>
-
-        <!-- 右旋鈕 -->
-        <Ellipse Grid.Column="2" Fill="DarkGray" Width="120" Height="120" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-    </Grid>
-</Grid>
-
-..
+        <!-- Climate -->
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+            <Image Source="/Assets/icon_climate.png" Width="32" Height="32" HorizontalAlignment="Center"/>
+            <TextBlock Text="Climate" Foreground="White" FontWeight="Bold" FontSize="14" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </StackPanel>
+</Border>
