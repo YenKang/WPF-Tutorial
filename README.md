@@ -1,30 +1,32 @@
-<ItemsControl ItemsSource="{Binding FanBarIndexList}">
-    <ItemsControl.ItemTemplate>
-        <DataTemplate>
-            <!-- 這一列的 DataContext == 當前 index (0..N-1) -->
-            <Rectangle Height="30"
-                       Width="300"
-                       Margin="25"
-                       Cursor="Hand">
-                <Rectangle.Fill>
-                    <!-- 你的 converter 完全不動 -->
-                    <MultiBinding Converter="{StaticResource FanLevelToBrushMultiConverter}">
-                        <!-- currentLevel（1-based） -->
-                        <Binding Path="DataContext.LeftFanLevel"
-                                 RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                        <!-- 這條的 index（0-based） -->
-                        <Binding />
-                    </MultiBinding>
-                </Rectangle.Fill>
+private void LoadImageFromFile(string path)
+{
+    if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+    {
+        CentralImage = null;
+        return;
+    }
 
-                <!-- ✅ 這裡把 LeftClick → Command -->
-                <Rectangle.InputBindings>
-                    <MouseBinding MouseAction="LeftClick"
-                                  Command="{Binding DataContext.SetLeftFanLevelCmd,
-                                                    RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                  CommandParameter="{Binding}" />
-                </Rectangle.InputBindings>
-            </Rectangle>
-        </DataTemplate>
-    </ItemsControl.ItemTemplate>
-</ItemsControl>
+    try
+    {
+        using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;           // 讀到記憶體，關檔不鎖檔
+            bmp.CreateOptions = BitmapCreateOptions.IgnoreImageCache; // 忽略同名快取
+            bmp.StreamSource = fs;
+            bmp.EndInit();
+            bmp.Freeze();                                         // 跨執行緒安全
+            CentralImage = bmp;
+        }
+    }
+    catch (IOException)
+    {
+        // 檔案被覆蓋當下可能尚未完成寫入，稍等再重試一次
+        Task.Delay(100).ContinueWith(_ =>
+        {
+            if (File.Exists(path))
+                Application.Current.Dispatcher.Invoke(() => LoadImageFromFile(path));
+        });
+    }
+}
