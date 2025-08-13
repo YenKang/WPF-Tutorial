@@ -1,10 +1,7 @@
-var p = BuildPosterPath("TouchID.bmp");
-if (!File.Exists(p))
+private string BuildPosterPath(string fileName)
 {
-    MessageBox.Show("找不到圖片：" + p);
-}
-else
-{
-    LoadImageFromFile(p);
-    MessageBox.Show("已載入：" + p);
+    var baseDir   = AppDomain.CurrentDomain.BaseDirectory;
+    var posterDir = Path.Combine(baseDir, "debug", "posterModeImages");
+    Directory.CreateDirectory(posterDir); // 沒有就建立
+    return Path.Combine(posterDir, fileName);
 }
