@@ -14,12 +14,9 @@
     </DataTemplate>
   </ListView.ItemTemplate>
 
-  <!-- 直接在 XAML 塞兩個 item 測試 -->
-  <ListViewItem>
-    <ListViewItem.DataContext>
-      <sys:Object xmlns:sys="clr-namespace:System;assembly=mscorlib">
-        <sys:DynamicObject/>
-      </sys:Object>
-    </ListViewItem.DataContext>
-  </ListViewItem>
+  <!-- 正確：直接放資料物件 -->
+  <ListView.Items>
+    <local:PatternItem Name="Black" Icon="Assets/Patterns/NT51635/PatIdx_0_Black.png"/>
+    <local:PatternItem Name="White" Icon="Assets/Patterns/NT51635/PatIdx_1_White.png"/>
+  </ListView.Items>
 </ListView>
