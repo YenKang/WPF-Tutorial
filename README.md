@@ -1,13 +1,31 @@
-<Border BorderThickness="2" BorderBrush="Gray" CornerRadius="6" Padding="10" Margin="10">
+<Border BorderThickness="2" BorderBrush="Gray" CornerRadius="5" Padding="10" Margin="20">
     <StackPanel>
-        <TextBlock Text="BIST_PT_Level [9:0]" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
-        <StackPanel Orientation="Vertical" Margin="4,0,0,0">
-            <TextBlock Text="Gray Level" Margin="0,0,0,4"/>
-            <!-- 預設 0x000~0x3FF、步進 1；Value 綁到 VM -->
-            <local:HexNumericUpDown Min="0x000" Max="0x3FF" Step="1"
-                                    Value="{Binding GrayLevel, Mode=TwoWay}"/>
-            <Button Content="Set" Width="90" Margin="0,10,0,0"
-                    Command="{Binding SetCommand}"/>
+        <!-- 標題 -->
+        <TextBlock Text="BIST_PT_Level [9:0]"
+                   FontWeight="Bold"
+                   FontSize="14"
+                   Margin="0,0,0,10"/>
+
+        <!-- Gray level 區塊 -->
+        <StackPanel Orientation="Vertical" Margin="5">
+            <TextBlock Text="Gray Level" FontSize="12" Margin="0,0,0,5"/>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <!-- TextBox 顯示 0x3FF -->
+                <TextBox Width="80"
+                         Text="{Binding GrayLevelHex, UpdateSourceTrigger=PropertyChanged}"
+                         HorizontalContentAlignment="Center"
+                         VerticalContentAlignment="Center"
+                         FontFamily="Consolas"
+                         FontSize="14"
+                         MaxLength="5"
+                         Margin="0,0,5,0"/>
+
+                <!-- Set 按鈕 -->
+                <Button Content="Set"
+                        Width="60"
+                        Command="{Binding SetCommand}"/>
+            </StackPanel>
         </StackPanel>
     </StackPanel>
 </Border>
