@@ -1,19 +1,13 @@
-<StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-    <TextBlock Text="Gray Level" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
-
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-        <TextBox Width="80"
-                 Text="{Binding GrayLevel, UpdateSourceTrigger=PropertyChanged}"
-                 MaxLength="3"
-                 HorizontalContentAlignment="Center"
-                 VerticalContentAlignment="Center"/>
-        <StackPanel Orientation="Vertical" Margin="5,0,0,0">
-            <Button Content="▲" Command="{Binding IncreaseCommand}" Width="25" Height="20"/>
-            <Button Content="▼" Command="{Binding DecreaseCommand}" Width="25" Height="20"/>
+<Border BorderThickness="2" BorderBrush="Gray" CornerRadius="6" Padding="10" Margin="10">
+    <StackPanel>
+        <TextBlock Text="BIST_PT_Level [9:0]" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
+        <StackPanel Orientation="Vertical" Margin="4,0,0,0">
+            <TextBlock Text="Gray Level" Margin="0,0,0,4"/>
+            <!-- 預設 0x000~0x3FF、步進 1；Value 綁到 VM -->
+            <local:HexNumericUpDown Min="0x000" Max="0x3FF" Step="1"
+                                    Value="{Binding GrayLevel, Mode=TwoWay}"/>
+            <Button Content="Set" Width="90" Margin="0,10,0,0"
+                    Command="{Binding SetCommand}"/>
         </StackPanel>
     </StackPanel>
-
-    <Button Content="Set"
-            Width="100"
-            Command="{Binding SetCommand}"/>
-</StackPanel>
+</Border>
