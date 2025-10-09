@@ -1,55 +1,40 @@
-<ListBox ItemsSource="{Binding Patterns}"
-         SelectedItem="{Binding SelectedPattern, Mode=TwoWay}"
-         SelectionMode="Single"
-         BorderThickness="0"
-         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+<DataTemplate>
+    <Border CornerRadius="3" BorderThickness="1" Background="Transparent">
+        <!-- 垂直排版：上面 CheckBox、下面 Button -->
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="2">
+            <!-- 上：原本的 CheckBox（顯示 P{Index}，選取樣式保持） -->
+            <CheckBox
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                FontSize="12"
+                Content="{Binding Index, StringFormat=P{0}}"
+                IsChecked="{Binding IsSelected,
+                            RelativeSource={RelativeSource AncestorType=ListBoxItem},
+                            Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                <CheckBox.Style>
+                    <Style TargetType="CheckBox">
+                        <Setter Property="Background" Value="WhiteSmoke"/>
+                        <Setter Property="BorderThickness" Value="1"/>
+                        <Setter Property="BorderBrush" Value="Black"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Background" Value="Yellow"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </CheckBox.Style>
+            </CheckBox>
 
-    <ListBox.ItemsPanel>
-        <ItemsPanelTemplate>
-            <WrapPanel/>
-        </ItemsPanelTemplate>
-    </ListBox.ItemsPanel>
-
-    <ListBox.ItemTemplate>
-        <DataTemplate>
-            <Border Width="70" Height="60"
-                    BorderThickness="1"
-                    BorderBrush="Gray"
-                    CornerRadius="3"
-                    Margin="3"
-                    Padding="2">
-                <StackPanel VerticalAlignment="Center">
-                    <!-- 上方：P 編號 + 勾選框 -->
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <TextBlock Text="{Binding Index, StringFormat=P{0}}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,6,0"
-                                   FontSize="12"/>
-                        <Border Width="12" Height="12" BorderThickness="1" BorderBrush="Gray">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsSelected,
-                                            RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
-                                                     Value="True">
-                                            <Setter Property="Background" Value="#E0E0E0"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- 下方：Button -->
-                    <Button Content="SET"
-                            Margin="0,6,0,0"
-                            FontSize="10"
-                            Padding="2"
-                            HorizontalAlignment="Center"
-                            Command="{Binding DataContext.ApplyPatternCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                            CommandParameter="{Binding}" />
-                </StackPanel>
-            </Border>
-        </DataTemplate>
-    </ListBox.ItemTemplate>
-</ListBox>
+            <!-- 下：新增的 Button -->
+            <Button Content="Set"
+                    Margin="0,4,0,0"
+                    Padding="2,0"
+                    FontSize="10"
+                    HorizontalAlignment="Center"
+                    Command="{Binding DataContext.ApplyPatternCommand,
+                                      RelativeSource={RelativeSource AncestorType=ListBox}}"
+                    CommandParameter="{Binding}" />
+        </StackPanel>
+    </Border>
+</DataTemplate>
