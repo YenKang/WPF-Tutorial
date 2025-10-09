@@ -1,9 +1,21 @@
-<StackPanel Margin="20">
-    <TextBlock Text="I am visible when SelectedPattern is NOT null"
-               Foreground="Green"
-               Visibility="{Binding SelectedPattern, Converter={StaticResource NullToVisibility}}"/>
+using System;
+using System.Globalization;
+using System.Windows.Data;
 
-    <TextBlock Text="I am visible when SelectedPattern is NULL"
-               Foreground="Red"
-               Visibility="{Binding SelectedPattern, Converter={StaticResource NullToInvertedVisibility}}"/>
-</StackPanel>
+namespace YourNamespace
+{
+    public record PatternSelectionArgs(PatternItem? Item, bool IsChecked);
+
+    public class PatternSelectionParamConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            var item = values.Length > 0 ? values[0] as PatternItem : null;
+            var isChecked = values.Length > 1 && values[1] is bool b && b;
+            return new PatternSelectionArgs(item, isChecked);
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+}
