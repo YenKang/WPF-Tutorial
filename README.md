@@ -1,52 +1,29 @@
-<StackPanel Margin="20">
-    <!-- 標題 + 開關 -->
-    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-        <TextBlock Text="Enable BIST Mode"
-                   VerticalAlignment="Center"
-                   Foreground="White"
-                   FontSize="16"
-                   Margin="0,0,12,0"/>
+<GroupBox Header="Pattern En" Margin="16">
+    <ListBox ItemsSource="{Binding Patterns}"
+             SelectedItem="{Binding SelectedPattern, Mode=TwoWay}"
+             SelectionMode="Single"
+             BorderThickness="0"
+             HorizontalContentAlignment="Stretch">
+        <!-- 讓項目自動換行成多欄 -->
+        <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+                <WrapPanel />
+            </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
 
-        <ToggleButton Width="60" Height="28"
-                      Cursor="Hand"
-                      IsChecked="{Binding IsBistEnabled, Mode=TwoWay}">
-            <ToggleButton.Template>
-                <ControlTemplate TargetType="ToggleButton">
-                    <Grid>
-                        <Border x:Name="SwitchBackground"
-                                CornerRadius="14"
-                                Background="#555"
-                                Width="60" Height="28"/>
-                        <Ellipse x:Name="Knob"
-                                 Width="22" Height="22"
-                                 Fill="White"
-                                 Margin="3,3,0,3"
-                                 HorizontalAlignment="Left"/>
-                        <TextBlock x:Name="SwitchLabel"
-                                   Text="Off"
-                                   Foreground="White"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontWeight="Bold"
-                                   FontSize="12"
-                                   Opacity="0.7"/>
-                    </Grid>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="SwitchBackground" Property="Background" Value="#2196F3"/>
-                            <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right"/>
-                            <Setter TargetName="SwitchLabel" Property="Text" Value="On"/>
-                            <Setter TargetName="SwitchLabel" Property="Opacity" Value="1"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </ToggleButton.Template>
-        </ToggleButton>
-    </StackPanel>
-
-    <!-- 下方 Set 按鈕 -->
-    <Button Content="Set"
-            Width="80"
-            Margin="0,8,0,0"
-            Command="{Binding EnableBistModeCommand}"/>
-</StackPanel>
+        <!-- 每個項目的外觀： P0 ☐、P1 ☐ ... -->
+        <ListBox.ItemTemplate>
+            <DataTemplate>
+                <Border Padding="6" Margin="6" CornerRadius="4" Background="#1AFFFFFF">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" Width="36" Margin="0,0,6,0"/>
+                        <!-- 勾選狀態 = 該 ListBoxItem 是否被選取（唯一性由 ListBox 管） -->
+                        <CheckBox IsChecked="{Binding IsSelected,
+                                   RelativeSource={RelativeSource AncestorType=ListBoxItem},
+                                   Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+        </ListBox.ItemTemplate>
+    </ListBox>
+</GroupBox>
