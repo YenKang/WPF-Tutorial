@@ -1,55 +1,73 @@
-<StackPanel Margin="12">
-  <!-- 標題獨立在 Border 上方 -->
-  <TextBlock Text="BIST_PT_Level[9:0]"
-             FontWeight="Bold" FontSize="16" Margin="0,0,0,8"/>
+using System;
+using System.ComponentModel;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 
-  <!-- Border 只放一個孩子 -->
-  <Border Background="#FFFFFF" CornerRadius="8" Padding="12"
-          BorderBrush="#E0E3E7" BorderThickness="1">
-    <Grid>
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-        <RowDefinition Height="Auto"/>
-      </Grid.RowDefinitions>
+public class BistLevelViewModel : INotifyPropertyChanged
+{
+    // --- 三個 Digit（字串：High 0~3；Mid/Low 0~F） ---
+    private string _highDigit = "3"; // 對應 D[9:8]
+    public string HighDigit
+    {
+        get { return _highDigit; }
+        set { if (_highDigit != value) { _highDigit = value; OnPropertyChanged(); RecomputeLevel(); } }
+    }
 
-      <!-- 第一行：挑選 pattern -->
-      <TextBlock Grid.Row="0" FontWeight="SemiBold" Margin="0,0,0,8">
-        <TextBlock.Text>
-          <MultiBinding StringFormat="挑選 pattern：P{0} — {1}">
-            <Binding Path="SelectedPattern.Index" TargetNullValue="-" />
-            <Binding Path="SelectedPattern.Name"  TargetNullValue="(none)" />
-          </MultiBinding>
-        </TextBlock.Text>
-      </TextBlock>
+    private string _midDigit = "F";  // 對應 D[7:4]
+    public string MidDigit
+    {
+        get { return _midDigit; }
+        set { if (_midDigit != value) { _midDigit = value; OnPropertyChanged(); RecomputeLevel(); } }
+    }
 
-      <!-- 三個十六進位 Digit（依你的截圖綁法） -->
-      <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
-        <!-- D[9:8] -->
-        <ComboBox Width="60"
-                  ItemsSource="{Binding LowDigitList}"
-                  SelectedItem="{Binding D98, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                  Margin="0,0,10,0"/>
-        <!-- D[7:4] -->
-        <ComboBox Width="60"
-                  ItemsSource="{Binding LowDigitList}"
-                  SelectedItem="{Binding D74, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                  Margin="0,0,10,0"/>
-        <!-- D[3:0] -->
-        <ComboBox Width="60"
-                  ItemsSource="{Binding LowDigitList}"
-                  SelectedItem="{Binding D30, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-      </StackPanel>
+    private string _lowDigit = "F";  // 對應 D[3:0]
+    public string LowDigit
+    {
+        get { return _lowDigit; }
+        set { if (_lowDigit != value) { _lowDigit = value; OnPropertyChanged(); RecomputeLevel(); } }
+    }
 
-      <!-- 顯示 3 FF -->
-      <TextBlock Grid.Row="2" Margin="0,8,0,0"
-                 FontFamily="Consolas" FontSize="20"
-                 Text="{Binding HexDisplay}" />
+    // 顯示用：例如 "3 FF"
+    private string _hexDisplay = "3 FF";
+    public string HexDisplay
+    {
+        get { return _hexDisplay; }
+        private set { if (_hexDisplay != value) { _hexDisplay = value; OnPropertyChanged(); } }
+    }
 
-      <!-- 顯示 GrayLevel = 十進位（例如 1023） -->
-      <TextBlock Grid.Row="3" Margin="0,4,0,0"
-                 Text="{Binding GrayLevelDisplay}" />
-    </Grid>
-  </Border>
-</StackPanel>
+    // 顯示用：例如 "GrayLevel = 1023 (0x3FF)"
+    private string _grayLevelDisplay = "GrayLevel = 1023 (0x3FF)";
+    public string GrayLevelDisplay
+    {
+        get { return _grayLevelDisplay; }
+        private set { if (_grayLevelDisplay != value) { _grayLevelDisplay = value; OnPropertyChanged(); } }
+    }
+
+    // 重新計算 10-bit 值 + 兩個顯示字串
+    private void RecomputeLevel()
+    {
+        int h = ParseHex1(HighDigit); // 0..3
+        int m = ParseHex1(MidDigit);  // 0..15
+        int l = ParseHex1(LowDigit);  // 0..15
+
+        // 組 10-bit：h 放到 bit[9:8]、m 放到 bit[7:4]、l 放到 bit[3:0]
+        int value = (h << 8) | (m << 4) | l;
+
+        // 顯示 "3 FF"
+        HexDisplay = string.Format("{0:X1} {1:X1}{2:X1}", h, m, l);
+
+        // 顯示 "GrayLevel = 1023 (0x3FF)"
+        GrayLevelDisplay = "GrayLevel = " + value.ToString(CultureInfo.InvariantCulture)
+                         + " (0x" + value.ToString("X3", CultureInfo.InvariantCulture) + ")";
+    }
+
+    private static int ParseHex1(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return 0;
+        return int.Parse(s.Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+    private void OnPropertyChanged([CallerMemberName] string name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
