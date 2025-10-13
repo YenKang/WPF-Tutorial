@@ -1,29 +1,42 @@
-NovaCID（主程式）
-├─ ModeHost（主控中樞，兼容新舊）
-│  ├─ LegacyProvider            ← 舊有頁面提供器（Home、Driver、Music…）
-│  ├─ PluginProvider            ← 新的外掛頁掃描器（./Modes/*.dll）
-│  ├─ Pages = Legacy ∪ Plugins  ← 最終頁面清單（新舊共存）
-│  └─ ViewResolver              ← 動態決定頁面外觀
-│     ├─ 1️⃣ ./Overrides/<Id>/View.xaml（外部覆蓋）
-│     ├─ 2️⃣ Plugin DLL 內建 View
-│     └─ 3️⃣ Legacy DataTemplate（最後回退）
-│
-├─ UI
-│  ├─ IconDock（底部選單，顯示所有頁面）
-│  │   └─ ItemsSource = Pages
-│  └─ ContentPresenter
-│      └─ Content = ViewResolver.Resolve(ActivePage)
-│
-├─ Legacy Pages（舊頁面仍可正常運作）
-│  ├─ HomeViewModel / View
-│  ├─ DriverPageViewModel / View
-│  └─ MusicPageViewModel / View
-│
-├─ Modes/         ← 新增「外掛頁面」DLL
-│  ├─ MovieMode.dll
-│  ├─ ClimateMode.dll
-│  └─ ...
-│
-└─ Overrides/     ← 外部 XAML 改外觀（不重編）
-   ├─ MovieMode/View.xaml
-   └─ ClimateMode/View.xaml
+<Grid.Resources>
+  <SolidColorBrush x:Key="CardBg" Color="#FFFFFF"/>
+  <SolidColorBrush x:Key="Border1" Color="#E1E4EA"/>
+  <SolidColorBrush x:Key="HeaderBg" Color="#F0F3F8"/>
+  <SolidColorBrush x:Key="HeaderFg" Color="#2A2F3A"/>
+
+  <Style x:Key="SectionGroupBox" TargetType="GroupBox">
+    <Setter Property="Margin" Value="0,0,0,12"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="GroupBox">
+          <Border Background="{StaticResource CardBg}"
+                  BorderBrush="{StaticResource Border1}"
+                  BorderThickness="1"
+                  CornerRadius="10">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+              </Grid.RowDefinitions>
+
+              <Border Background="{StaticResource HeaderBg}"
+                      CornerRadius="10,10,0,0"
+                      Padding="10,6"
+                      BorderBrush="{StaticResource Border1}"
+                      BorderThickness="0,0,0,1">
+                <ContentPresenter ContentSource="Header"
+                                  TextElement.FontWeight="SemiBold"
+                                  TextElement.Foreground="{StaticResource HeaderFg}"/>
+              </Border>
+
+              <Border Grid.Row="1" Padding="12">
+                <ContentPresenter/>
+              </Border>
+            </Grid>
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+</Grid.Resources>
