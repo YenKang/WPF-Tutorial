@@ -1,42 +1,12 @@
-<Grid.Resources>
-  <SolidColorBrush x:Key="CardBg" Color="#FFFFFF"/>
-  <SolidColorBrush x:Key="Border1" Color="#E1E4EA"/>
-  <SolidColorBrush x:Key="HeaderBg" Color="#F0F3F8"/>
-  <SolidColorBrush x:Key="HeaderFg" Color="#2A2F3A"/>
-
-  <Style x:Key="SectionGroupBox" TargetType="GroupBox">
-    <Setter Property="Margin" Value="0,0,0,12"/>
-    <Setter Property="Padding" Value="0"/>
-    <Setter Property="Template">
-      <Setter.Value>
-        <ControlTemplate TargetType="GroupBox">
-          <Border Background="{StaticResource CardBg}"
-                  BorderBrush="{StaticResource Border1}"
-                  BorderThickness="1"
-                  CornerRadius="10">
-            <Grid>
-              <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-              </Grid.RowDefinitions>
-
-              <Border Background="{StaticResource HeaderBg}"
-                      CornerRadius="10,10,0,0"
-                      Padding="10,6"
-                      BorderBrush="{StaticResource Border1}"
-                      BorderThickness="0,0,0,1">
-                <ContentPresenter ContentSource="Header"
-                                  TextElement.FontWeight="SemiBold"
-                                  TextElement.Foreground="{StaticResource HeaderFg}"/>
-              </Border>
-
-              <Border Grid.Row="1" Padding="12">
-                <ContentPresenter/>
-              </Border>
-            </Grid>
-          </Border>
-        </ControlTemplate>
-      </Setter.Value>
-    </Setter>
-  </Style>
-</Grid.Resources>
+<!-- 1) Toggle 區：外面加 GroupBox + 套樣式 -->
+<GroupBox Header="BIST Enable" Style="{StaticResource SectionGroupBox}">
+  <!-- ↓↓↓ 把你 IMG_0535 的原始內容原封不動貼進來 ↓↓↓ -->
+  <!-- 例如：
+  <StackPanel Orientation="Horizontal" Spacing="8">
+    <CheckBox Content="Enable BIST Mode"
+              IsChecked="{Binding IsBistEnabled, Mode=TwoWay}" />
+    <TextBlock Text="{Binding IsBistEnabled, StringFormat=Enabled: {0}}" Opacity="0.6"/>
+  </StackPanel>
+  -->
+  <!-- ↑↑↑ 保持你自己的 Binding 與控件，不要改 ↑↑↑ -->
+</GroupBox>
