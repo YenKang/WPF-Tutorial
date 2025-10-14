@@ -1,53 +1,29 @@
-// ==========================
-//  BistModeViewModel.cs
-// ==========================
-private IcProfile _profile;
-private bool _busReady = false;
-private bool _profileReady = false;
-
-public RegisterReadWriteEx RegDisplayControl { get; private set; }
-
-// ---------- SetRegDisplay (由外部呼叫) ----------
-public void SetRegDisplay(object RegDisplayObj)
+public void DebugJsonAndMapSmoke()
 {
-    var reg = RegDisplayObj as RegisterReadWriteEx;
-    if (reg == null) return;
-
-    RegDisplayControl = reg;
-
-    // 包裝成 IRegisterBus adapter
-    var bus = new RegDisplayBus(RegDisplayControl);
-    RegMap.Init(bus);
-    _busReady = true;
-
-    // 檢查：若 profile 已載好 → 就可直接完成整合
-    TryInitRegMap();
-}
-
-// ---------- 載入 Profile ----------
-private void LoadProfileFromFile()
-{
-    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-    var profilePath = System.IO.Path.Combine(baseDir, "Profiles", "NT51365.profile.json");
-
-    _profile = ProfileLoader.Load(profilePath);
-    _profileReady = true;
-
-    // 餵給 UI
-    Patterns.Clear();
-    foreach (var p in _profile.Patterns)
-        Patterns.Add(new BistMode.Models.PatternItem { Index = p.Index, Name = p.Name, Icon = p.Icon });
-
-    // 檢查：若 bus 已準備 → 就能立即載入
-    TryInitRegMap();
-}
-
-// ---------- 雙 Ready 檢查 ----------
-private void TryInitRegMap()
-{
-    if (_busReady && _profileReady)
+    if (_profile == null)
     {
-        RegMap.LoadFrom(_profile);
-        // 這裡可加 DebugLog("RegMap initialized");
+        System.Windows.MessageBox.Show("❌ profile = null");
+        return;
+    }
+
+    // 1️⃣ JSON 結構檢查
+    string msg =
+        "IcName = " + _profile.IcName + "\n" +
+        "Registers = " + (_profile.Registers != null ? _profile.Registers.Count.ToString() : "null") + "\n" +
+        "Patterns = " + (_profile.Patterns != null ? _profile.Patterns.Count.ToString() : "null");
+    System.Diagnostics.Debug.WriteLine("✅ JSON OK:\n" + msg);
+
+    // 2️⃣ 檢查 RegMap 是否已初始化
+    try
+    {
+        var pr = RegMap.Get("BIST_PT_LEVEL"); // 僅取位址，不實際存取硬體
+        System.Diagnostics.Debug.WriteLine(
+            "✅ RegMap Get(BIST_PT_LEVEL) => page=" + pr.Item1 + " reg=" + pr.Item2);
+
+        System.Windows.MessageBox.Show("✅ JSON + RegMap 正常！");
+    }
+    catch (System.Exception ex)
+    {
+        System.Windows.MessageBox.Show("⚠️ RegMap 尚未初始化或找不到 key：\n" + ex.Message);
     }
 }
