@@ -1,50 +1,30 @@
-<Grid Background="#F7F8FA" UseLayoutRounding="True" SnapsToDevicePixels="True">
-  <Grid.ColumnDefinitions>
-    <ColumnDefinition Width="380"/>   <!-- 左側固定欄 -->
-    <ColumnDefinition Width="12"/>    <!-- 中間縫隙 -->
-    <ColumnDefinition Width="*"/>     <!-- 右側舞台 -->
-  </Grid.ColumnDefinitions>
-
-  <!-- 左側控制欄 -->
-  <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
-    <StackPanel Margin="12" Orientation="Vertical" >
-
-      <!-- 1) Toggle 區 -->
-      <GroupBox Header="BIST Mode" Margin="0,0,0,12">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <ToggleButton Content="Off" Width="80" Height="28"/>
-          <Button Content="Enable Mode" Padding="12,6" Margin="8,0,0,0"/>
-        </StackPanel>
-      </GroupBox>
-
-      <!-- 2) Pattern 區 -->
-      <GroupBox Header="Pattern En" Margin="0,0,0,12">
-        <!-- 放你現有 Pattern 選圖內容 -->
-        <StackPanel>
-          <TextBlock Text="Pattern selection area" Foreground="Gray"/>
-        </StackPanel>
-      </GroupBox>
-
-      <!-- 3) GrayLevel 區 -->
-      <GroupBox Header="BIST_PT_Level [9:0]" Margin="0,0,0,12">
-        <!-- 放你 GrayLevel 控制內容 -->
-        <StackPanel>
-          <TextBlock Text="Gray Level controls here" Foreground="Gray"/>
-        </StackPanel>
-      </GroupBox>
-
-    </StackPanel>
-  </ScrollViewer>
-
-  <!-- 右側固定寬圖片牆 -->
-  <Border Grid.Column="2" Padding="12" HorizontalAlignment="Center">
-    <Grid Width="960">
-      <!-- 放你的圖片牆 XAML -->
-      <TextBlock Text="Image Wall Area"
-                 Foreground="DarkGray"
-                 FontSize="16"
-                 HorizontalAlignment="Center"
-                 VerticalAlignment="Center"/>
-    </Grid>
-  </Border>
-</Grid>
+NovaCID.BistMode/
+│
+├── ViewModels/
+│   ├── BistModeViewModel.cs           ← 主控制邏輯（綁 UI）
+│   └── FeatureFlags.cs                ← JSON 開關控制
+│
+├── Views/
+│   └── BistModeView.xaml              ← UI 介面（Pattern list, Gray level, Set 按鈕）
+│
+├── Services/
+│   ├── BistService.cs                 ← 解譯 JSON 指令，寫暫存器
+│   ├── RegDisplayControl.cs           ← 你現有的底層 SPI 寫入控制
+│   └── ProfileLoader.cs               ← 讀取 JSON 檔、序列化成物件
+│
+├── Profiles/
+│   ├── NT51365.profile.json           ← JSON 設定檔（圖 + 暫存器 + 序列）
+│   ├── NT51950.profile.json           ← 未來其他 IC
+│   └── NT51920.profile.json
+│
+├── Assets/
+│   └── Patterns/
+│       ├── NT51365/
+│       │   ├── P0_Black.png
+│       │   ├── P1_White.png
+│       │   ├── P2_Red.png
+│       │   └── ...
+│       ├── NT51950/
+│       └── NT51920/
+│
+└── App.xaml.cs
