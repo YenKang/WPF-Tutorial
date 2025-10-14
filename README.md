@@ -1,74 +1,53 @@
-using System;
-using System.Collections.Generic;
+// ==========================
+//  BistModeViewModel.cs
+// ==========================
+private IcProfile _profile;
+private bool _busReady = false;
+private bool _profileReady = false;
 
-public static class RegMap
+public RegisterReadWriteEx RegDisplayControl { get; private set; }
+
+// ---------- SetRegDisplay (由外部呼叫) ----------
+public void SetRegDisplay(object RegDisplayObj)
 {
-    private static readonly Dictionary<string, ushort> _regs =
-        new Dictionary<string, ushort>(StringComparer.OrdinalIgnoreCase);
+    var reg = RegDisplayObj as RegisterReadWriteEx;
+    if (reg == null) return;
 
-    private static IRegisterBus _bus;
+    RegDisplayControl = reg;
 
-    public static void Init(IRegisterBus bus)
+    // 包裝成 IRegisterBus adapter
+    var bus = new RegDisplayBus(RegDisplayControl);
+    RegMap.Init(bus);
+    _busReady = true;
+
+    // 檢查：若 profile 已載好 → 就可直接完成整合
+    TryInitRegMap();
+}
+
+// ---------- 載入 Profile ----------
+private void LoadProfileFromFile()
+{
+    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+    var profilePath = System.IO.Path.Combine(baseDir, "Profiles", "NT51365.profile.json");
+
+    _profile = ProfileLoader.Load(profilePath);
+    _profileReady = true;
+
+    // 餵給 UI
+    Patterns.Clear();
+    foreach (var p in _profile.Patterns)
+        Patterns.Add(new BistMode.Models.PatternItem { Index = p.Index, Name = p.Name, Icon = p.Icon });
+
+    // 檢查：若 bus 已準備 → 就能立即載入
+    TryInitRegMap();
+}
+
+// ---------- 雙 Ready 檢查 ----------
+private void TryInitRegMap()
+{
+    if (_busReady && _profileReady)
     {
-        if (bus == null) throw new ArgumentNullException("bus");
-        _bus = bus;
-    }
-
-    public static void LoadFrom(IcProfile profile)
-    {
-        if (profile == null) throw new ArgumentNullException("profile");
-
-        _regs.Clear();
-        foreach (var kv in profile.Registers)
-        {
-            // 防呆：避免空字串
-            var hex = kv.Value == null ? "" : kv.Value.Replace("0x", "").Replace("0X", "");
-            ushort val = Convert.ToUInt16(hex, 16);
-            _regs[kv.Key] = val;
-        }
-    }
-
-    private static Tuple<byte, byte> Split(ushort full)
-    {
-        var page = (byte)(full >> 8);
-        var reg  = (byte)(full & 0xFF);
-        return Tuple.Create(page, reg);
-    }
-
-    public static Tuple<byte, byte> Get(string name)
-    {
-        ushort full;
-        if (!_regs.TryGetValue(name, out full))
-            throw new KeyNotFoundException("Register name not found: " + name);
-        return Split(full);
-    }
-
-    public static void Write8(string name, byte value)
-    {
-        EnsureBus();
-        var pr = Get(name);
-        _bus.Write(pr.Item1, pr.Item2, value);
-    }
-
-    public static byte Read8(string name)
-    {
-        EnsureBus();
-        var pr = Get(name);
-        return _bus.Read(pr.Item1, pr.Item2);
-    }
-
-    public static void Rmw8(string name, byte mask, byte valueShifted)
-    {
-        EnsureBus();
-        var pr = Get(name);
-        byte cur  = _bus.Read(pr.Item1, pr.Item2);
-        byte next = (byte)((cur & ~mask) | (valueShifted & mask));
-        _bus.Write(pr.Item1, pr.Item2, next);
-    }
-
-    private static void EnsureBus()
-    {
-        if (_bus == null)
-            throw new InvalidOperationException("RegMap.Init(bus) must be called before using RegMap.");
+        RegMap.LoadFrom(_profile);
+        // 這裡可加 DebugLog("RegMap initialized");
     }
 }
