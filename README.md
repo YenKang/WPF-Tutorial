@@ -1,86 +1,89 @@
-public sealed class RegDef
+using System;
+using System.IO;
+using Newtonsoft.Json;
+
+namespace BistApp
 {
-    public string addr { get; set; }
-    public int width { get; set; }
-    public string desc { get; set; }
-}
-
-public sealed class FieldDef
-{
-    public int min { get; set; }
-    public int max { get; set; }
-
-    [Newtonsoft.Json.JsonProperty("default")]
-    public int defaultValue { get; set; }
-}
-
-public sealed class RowDef
-{
-    public string id { get; set; }
-    public string title { get; set; }
-    public string fieldType { get; set; }
-    public Dictionary<string, FieldDef> fields { get; set; }
-    public System.Collections.Generic.List<object> writes { get; set; }
-}
-
-public sealed class PatternDef
-{
-    public string name { get; set; }
-    public int index { get; set; }
-    public System.Collections.Generic.List<RowDef> rows { get; set; }
-}
-
-public sealed class ChipProfile
-{
-    public string chip { get; set; }
-    public System.Collections.Generic.Dictionary<string, RegDef> registers { get; set; }
-    public System.Collections.Generic.List<PatternDef> patterns { get; set; }
-}
-
-
-
-=======
-
-public static class ProfileLoaderNew
-{
-    public static ChipProfile LoadChipProfile(string path)
+    /// <summary>
+    /// 讀取 JSON Profile 並提供常用轉換工具。
+    /// </summary>
+    public static class ProfileLoader
     {
-        if (!File.Exists(path))
-            throw new FileNotFoundException("找不到指定 JSON Profile。", path);
+        /// <summary>
+        /// 從指定路徑載入 JSON Profile 檔案，反序列化成 ChipProfile。
+        /// 例：Assets/Profiles/NT51365.profile.json
+        /// </summary>
+        public static ChipProfile LoadChipProfile(string path)
+        {
+            // 1) 基本檢查：檔案是否存在
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException("找不到指定的 JSON Profile 檔案。", path);
+            }
 
-        string json = File.ReadAllText(path);
+            // 2) 讀取檔案字串
+            string json = File.ReadAllText(path);
 
-        ChipProfile profile = JsonConvert.DeserializeObject<ChipProfile>(json);
+            // 3) 反序列化為 ChipProfile 物件
+            ChipProfile profile = JsonConvert.DeserializeObject<ChipProfile>(json);
 
-        if (profile == null)
-            throw new InvalidOperationException("ChipProfile 反序列化失敗。");
+            // 4) 檢查反序列化結果
+            if (profile == null)
+            {
+                throw new InvalidOperationException("ChipProfile 反序列化失敗，請確認 JSON 格式是否正確。");
+            }
+            if (profile.registers == null)
+            {
+                throw new InvalidOperationException("JSON 中缺少 'registers' 欄位。");
+            }
+            if (profile.patterns == null)
+            {
+                throw new InvalidOperationException("JSON 中缺少 'patterns' 欄位。");
+            }
 
-        if (profile.registers == null)
-            throw new InvalidOperationException("registers 欄位缺失。");
+            return profile;
+        }
 
-        if (profile.patterns == null)
-            throw new InvalidOperationException("patterns 欄位缺失。");
+        /// <summary>
+        /// 將十六進位位址字串（"0x0030" 或 "0030"）轉成 16-bit 位址。
+        /// 來源：registers.*.addr
+        /// </summary>
+        public static ushort ToAddr(string hex)
+        {
+            if (string.IsNullOrWhiteSpace(hex))
+            {
+                throw new ArgumentException("位址字串為空白或無效。", "hex");
+            }
 
-        return profile;
-    }
+            if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                hex = hex.Substring(2);
+            }
 
-    public static ushort ToAddr(string hex)
-    {
-        if (string.IsNullOrWhiteSpace(hex))
-            throw new ArgumentException("位址字串為空。");
-        if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            hex = hex.Substring(2);
-        return Convert.ToUInt16(hex, 16);
-    }
+            return Convert.ToUInt16(hex, 16);
+        }
 
-    public static int ParseInt(string s)
-    {
-        if (s == null)
-            throw new ArgumentNullException("s");
-        if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            return Convert.ToInt32(s.Substring(2), 16);
-        return int.Parse(s);
+        /// <summary>
+        /// 將十六進位或十進位字串轉成 int。
+        /// 來源：writes[].mask / writes[].shift / 其它數值
+        /// 例："0x03"→3、"12"→12
+        /// </summary>
+        public static int ParseInt(string s)
+        {
+            if (s == null)
+            {
+                throw new ArgumentNullException("s", "輸入字串為 null。");
+            }
+
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                string hexPart = s.Substring(2);
+                return Convert.ToInt32(hexPart, 16);
+            }
+            else
+            {
+                return int.Parse(s);
+            }
+        }
     }
 }
-
-===========
