@@ -1,26 +1,40 @@
-private void BtnSetGrayLevel_Click(object sender, RoutedEventArgs e)
+using System.Collections.Generic;
+
+public class ProfileRoot
 {
-    // 1️⃣ 載入 JSON Profile
-    var root = BistMode.Services.JsonConfigUiRunner.LoadRoot(@"Assets/Profiles/NT51365.profile.json");
+    public List<PatternNode> patterns { get; set; } = new List<PatternNode>();
+}
 
-    // 2️⃣ 取得 Red pattern 內的設定
-    var rows = BistMode.Services.JsonConfigUiRunner.GetRows(root, "Red");
-    var enumerator = rows.GetEnumerator();
-    enumerator.MoveNext();
-    var targetRow = enumerator.Current;
+public class PatternNode
+{
+    public int index { get; set; }
+    public string name { get; set; }
+    public string icon { get; set; }
+    public List<ConfigUIRaw> configUIRaws { get; set; } = new List<ConfigUIRaw>();
+}
 
-    // 3️⃣ 從 UI 元件讀取值（假設三個 ComboBox）
-    targetRow.D2 = comboD2.SelectedIndex;
-    targetRow.D1 = comboD1.SelectedIndex;
-    targetRow.D0 = comboD0.SelectedIndex;
+public class ConfigUIRaw
+{
+    public string id { get; set; }
+    public string title { get; set; }
+    public string kind { get; set; }
+    public Dictionary<string, FieldDef> fields { get; set; } = new Dictionary<string, FieldDef>();
+    public List<WriteOp> writes { get; set; } = new List<WriteOp>();
+    public string explain { get; set; }
+}
 
-    // 4️⃣ 寫入暫存器（不改舊 code）
-    BistMode.Services.JsonConfigUiRunner.ExecuteRow(
-        root,
-        targetRow,
-        // 讀取委派
-        addr => RegDisplayControl.ReadRegData(0, addr),
-        // 寫入委派
-        (addr, value) => RegDisplayControl.WriteRegData(0, addr, value)
-    );
+public class FieldDef
+{
+    public int min { get; set; }
+    public int max { get; set; }
+    public int @default { get; set; }  // "default"
+}
+
+public class WriteOp
+{
+    public string mode { get; set; }
+    public string target { get; set; }
+    public string mask { get; set; }
+    public int? shift { get; set; }
+    public string src { get; set; }
 }
