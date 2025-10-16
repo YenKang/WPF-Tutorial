@@ -1,21 +1,6 @@
-<!-- 這段放在 ItemsControl.ItemTemplate 裡你的四欄 Grid -->
-<!-- col2: D2 -->
-<ComboBox Grid.Column="1" Width="90" Height="28" HorizontalAlignment="Center"
-          ItemsSource="{StaticResource Range0to3}"
-          SelectedItem="{Binding DataContext.D2, Mode=TwoWay,
-                                 RelativeSource={RelativeSource AncestorType=Window}}"
-          Background="White" Foreground="Black"/>
-
-<!-- col3: D1 -->
-<ComboBox Grid.Column="2" Width="90" Height="28" HorizontalAlignment="Center"
-          ItemsSource="{StaticResource Range0toF}"
-          SelectedItem="{Binding DataContext.D1, Mode=TwoWay,
-                                 RelativeSource={RelativeSource AncestorType=Window}}"
-          Background="White" Foreground="Black"/>
-
-<!-- col4: D0 -->
-<ComboBox Grid.Column="3" Width="90" Height="28" HorizontalAlignment="Center"
-          ItemsSource="{StaticResource Range0toF}"
-          SelectedItem="{Binding DataContext.D0, Mode=TwoWay,
-                                 RelativeSource={RelativeSource AncestorType=Window}}"
-          Background="White" Foreground="Black"/>
+ <!-- col5: 固定尺寸的 Set 按鈕，呼叫 VM 的命令，參數 = 這一列的 ConfigUIRaw -->
+          <Button Grid.Column="4" Content="Set"
+                  Width="60" Height="30" HorizontalAlignment="Center"
+                  Command="{Binding DataContext.ApplyRowCommand,
+                                    RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                  CommandParameter="{Binding}"/>
