@@ -1,10 +1,3 @@
-var j = grayLevelControl as JObject;
-var f = j?["fields"] as JObject;
-System.Diagnostics.Debug.WriteLine($"[GrayVM] fields is null? { (f==null) }");
-
-System.Diagnostics.Debug.WriteLine($"[GrayVM] D2Options={D2Options.Count}, 
-D1={D1Options.Count}, D0={D0Options.Count}");
-
 public void LoadFrom(object grayLevelControl)
 {
     var j = grayLevelControl as JObject;
