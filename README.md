@@ -1,37 +1,37 @@
-public void LoadFrom(object grayLevelControl)
-{
-    var j = grayLevelControl as JObject;
-    if (j == null) return;
+、<!-- 🧱 Gray Level Control -->
+<GroupBox Header="Gray Level Control"
+          Visibility="{Binding IsGrayLevelVisible, Converter={utilityConv:BoolToVisibilityConverter}}">
+    <StackPanel Orientation="Horizontal" Margin="12">
 
-    var f = j["fields"] as JObject;
-    if (f == null)
-    {
-        System.Diagnostics.Debug.WriteLine("[GrayVM] fields missing in JSON.");
-        return; // ⛔ 不清空，保留原本選項，避免空白造成 '' → int 的錯誤
-    }
+        <TextBlock Text="GrayLevel [9:0]"
+                   FontWeight="Bold"
+                   VerticalAlignment="Center"
+                   Margin="0,0,12,0"/>
 
-    ApplyFieldRange(D2Options, f["D2"] as JObject, 0, 3,  v => D2 = v);
-    ApplyFieldRange(D1Options, f["D1"] as JObject, 0, 15, v => D1 = v);
-    ApplyFieldRange(D0Options, f["D0"] as JObject, 0, 15, v => D0 = v);
+        <!-- D2 -->
+        <ComboBox Width="50"
+                  ItemsSource="{Binding GrayLevelVM.D2Options}"
+                  SelectedItem="{Binding GrayLevelVM.D2, Mode=TwoWay}"
+                  Margin="4,0"
+                  ItemStringFormat="{}{0:X}"/>
 
-    System.Diagnostics.Debug.WriteLine($"[GrayVM] Done. D2={D2}, D1={D1}, D0={D0}");
-}
+        <!-- D1 -->
+        <ComboBox Width="50"
+                  ItemsSource="{Binding GrayLevelVM.D1Options}"
+                  SelectedItem="{Binding GrayLevelVM.D1, Mode=TwoWay}"
+                  Margin="4,0"
+                  ItemStringFormat="{}{0:X}"/>
 
-private static void ApplyFieldRange(
-    ObservableCollection<int> target,
-    JObject field,
-    int fallbackMin, int fallbackMax,
-    System.Action<int> setDefault)
-{
-    // 如果該欄位缺失，用 fallback；這樣不會把清單清到空
-    int min = (int?)field?["min"] ?? fallbackMin;
-    int max = (int?)field?["max"] ?? fallbackMax;
-    int def = (int?)field?["default"] ?? min;
+        <!-- D0 -->
+        <ComboBox Width="50"
+                  ItemsSource="{Binding GrayLevelVM.D0Options}"
+                  SelectedItem="{Binding GrayLevelVM.D0, Mode=TwoWay}"
+                  Margin="4,0"
+                  ItemStringFormat="{}{0:X}"/>
 
-    target.Clear();
-    for (int i = min; i <= max; i++) target.Add(i);
-
-    if (def < min) def = min;
-    if (def > max) def = max;
-    setDefault(def); // ← 最後設定 SelectedItem 對應的值
-}
+        <Button Content="Set"
+                Width="60" Height="30"
+                Margin="12,0,0,0"
+                Command="{Binding GrayLevelVM.ApplyCommand}"/>
+    </StackPanel>
+</GroupBox>
