@@ -1,55 +1,103 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Collections.ObjectModel;
+<Window x:Class="BistMode.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        Title="BIST UI Bind Test" Width="720" Height="320" Background="#F7F9FC">
 
-public class BistModeViewModel : INotifyPropertyChanged
-{
-    // 右側：直接綁定 XAML ItemsSource
-    private List<ConfigUIRaw> _configUiRaws = new List<ConfigUIRaw>();
-    public List<ConfigUIRaw> ConfigUiRaws
-    {
-        get { return _configUiRaws; }
-        set { _configUiRaws = value; OnPropertyChanged("ConfigUiRaws"); }
-    }
+    <Window.DataContext>
+        <BistModeViewModel/>
+    </Window.DataContext>
 
-    public BistModeViewModel()
-    {
-        // ✅ 手動建立一筆假資料
-        ConfigUiRaws = new List<ConfigUIRaw>
-        {
-            new ConfigUIRaw
-            {
-                title = "GrayLevel [9:0]",
-                kind = "grayLevelControl",
-                fields = new Dictionary<string, FieldDef>
-                {
-                    ["D2"] = new FieldDef { min = 0, max = 3,  @default = 2 },
-                    ["D1"] = new FieldDef { min = 0, max = 15, @default = 8 },
-                    ["D0"] = new FieldDef { min = 0, max = 15, @default = 12 }
-                }
-            }
-        };
-    }
+    <Grid Margin="20">
+        <ItemsControl ItemsSource="{Binding ConfigUiRaws}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="White" BorderBrush="#E0E0E0" BorderThickness="1"
+                            CornerRadius="4" Padding="12" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="240"/> <!-- Title -->
+                                <ColumnDefinition Width="*"/>   <!-- D2 -->
+                                <ColumnDefinition Width="*"/>   <!-- D1 -->
+                                <ColumnDefinition Width="*"/>   <!-- D0 -->
+                            </Grid.ColumnDefinitions>
 
-    public event PropertyChangedEventHandler PropertyChanged;
-    private void OnPropertyChanged(string name)
-    {
-        var h = PropertyChanged; if (h != null) h(this, new PropertyChangedEventArgs(name));
-    }
-}
+                            <!-- col 1: Title -->
+                            <TextBlock Grid.Column="0" Text="{Binding title}" 
+                                       FontSize="16" FontWeight="Bold" VerticalAlignment="Center"/>
 
-// 以下是你既有 Model 的最小必要部分（可放同檔）
-public class ConfigUIRaw
-{
-    public string title { get; set; }
-    public string kind { get; set; }
-    public Dictionary<string, FieldDef> fields { get; set; } = new Dictionary<string, FieldDef>();
-}
+                            <!-- col 2: D2 -->
+                            <ComboBox Grid.Column="1" Width="90" Height="28" HorizontalAlignment="Center">
+                                <ComboBox.ItemsSource>
+                                    <x:Array Type="{x:Type sys:Int32}">
+                                        <sys:Int32>0</sys:Int32>
+                                        <sys:Int32>1</sys:Int32>
+                                        <sys:Int32>2</sys:Int32>
+                                        <sys:Int32>3</sys:Int32>
+                                    </x:Array>
+                                </ComboBox.ItemsSource>
+                                <ComboBox.SelectedIndex>
+                                    <Binding Path="fields[D2].@default"/>
+                                </ComboBox.SelectedIndex>
+                            </ComboBox>
 
-public class FieldDef
-{
-    public int min { get; set; }
-    public int max { get; set; }
-    public int @default { get; set; }
-}
+                            <!-- col 3: D1 -->
+                            <ComboBox Grid.Column="2" Width="90" Height="28" HorizontalAlignment="Center">
+                                <ComboBox.ItemsSource>
+                                    <x:Array Type="{x:Type sys:Int32}">
+                                        <sys:Int32>0</sys:Int32>
+                                        <sys:Int32>1</sys:Int32>
+                                        <sys:Int32>2</sys:Int32>
+                                        <sys:Int32>3</sys:Int32>
+                                        <sys:Int32>4</sys:Int32>
+                                        <sys:Int32>5</sys:Int32>
+                                        <sys:Int32>6</sys:Int32>
+                                        <sys:Int32>7</sys:Int32>
+                                        <sys:Int32>8</sys:Int32>
+                                        <sys:Int32>9</sys:Int32>
+                                        <sys:Int32>10</sys:Int32>
+                                        <sys:Int32>11</sys:Int32>
+                                        <sys:Int32>12</sys:Int32>
+                                        <sys:Int32>13</sys:Int32>
+                                        <sys:Int32>14</sys:Int32>
+                                        <sys:Int32>15</sys:Int32>
+                                    </x:Array>
+                                </ComboBox.ItemsSource>
+                                <ComboBox.SelectedIndex>
+                                    <Binding Path="fields[D1].@default"/>
+                                </ComboBox.SelectedIndex>
+                            </ComboBox>
+
+                            <!-- col 4: D0 -->
+                            <ComboBox Grid.Column="3" Width="90" Height="28" HorizontalAlignment="Center">
+                                <ComboBox.ItemsSource>
+                                    <x:Array Type="{x:Type sys:Int32}">
+                                        <sys:Int32>0</sys:Int32>
+                                        <sys:Int32>1</sys:Int32>
+                                        <sys:Int32>2</sys:Int32>
+                                        <sys:Int32>3</sys:Int32>
+                                        <sys:Int32>4</sys:Int32>
+                                        <sys:Int32>5</sys:Int32>
+                                        <sys:Int32>6</sys:Int32>
+                                        <sys:Int32>7</sys:Int32>
+                                        <sys:Int32>8</sys:Int32>
+                                        <sys:Int32>9</sys:Int32>
+                                        <sys:Int32>10</sys:Int32>
+                                        <sys:Int32>11</sys:Int32>
+                                        <sys:Int32>12</sys:Int32>
+                                        <sys:Int32>13</sys:Int32>
+                                        <sys:Int32>14</sys:Int32>
+                                        <sys:Int32>15</sys:Int32>
+                                    </x:Array>
+                                </ComboBox.ItemsSource>
+                                <ComboBox.SelectedIndex>
+                                    <Binding Path="fields[D0].@default"/>
+                                </ComboBox.SelectedIndex>
+                            </ComboBox>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</Window>
