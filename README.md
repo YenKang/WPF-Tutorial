@@ -1,20 +1,24 @@
-// 1) VM 實例（共用一個）
-public GrayLevelVM GrayLevelVM { get; } = new GrayLevelVM();
-
-// 2) 可見旗標（給 XAML 綁 Visibility）
-private bool _isGrayLevelVisible;
-public bool IsGrayLevelVisible
+public void LoadFrom(object jsonBlock)
 {
-    get => _isGrayLevelVisible;
-    set { if (_isGrayLevelVisible == value) return; _isGrayLevelVisible = value; OnPropertyChanged(); }
-}
+    var j = jsonBlock as Newtonsoft.Json.Linq.JObject;
+    if (j == null) return;
 
-// 3) Pattern 切換時套用（SelectedPattern 的 setter 裡呼叫）
-private void ApplyPatternToGroups(PatternItem p)
-{
-    var types = (p?.RegControlType) ?? new List<string>();
-    IsGrayLevelVisible = types.Contains("grayLevelControl");
+    var f = j["fields"] as Newtonsoft.Json.Linq.JObject;
 
-    if (IsGrayLevelVisible && p.GrayLevelControl != null)
-        GrayLevelVM.LoadFrom(p.GrayLevelControl);   // ← 把 JSON 區塊餵進去
+    D2Options.Clear();
+    for (int i = (int)f["D2"]["min"]; i <= (int)f["D2"]["max"]; i++)
+        D2Options.Add(i);
+
+    D1Options.Clear();
+    for (int i = (int)f["D1"]["min"]; i <= (int)f["D1"]["max"]; i++)
+        D1Options.Add(i);
+
+    D0Options.Clear();
+    for (int i = (int)f["D0"]["min"]; i <= (int)f["D0"]["max"]; i++)
+        D0Options.Add(i);
+
+    // ✅ 設定 default 值
+    D2 = (int)f["D2"]["default"];
+    D1 = (int)f["D1"]["default"];
+    D0 = (int)f["D0"]["default"];
 }
