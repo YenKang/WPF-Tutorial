@@ -1,16 +1,5 @@
-foreach (var node in _profile.Patterns)
-{
-    string iconUri = "pack://siteoforigin:,,,/Assets/Patterns/NT51365/" + node.icon;
-    var item = new PatternItem
-    {
-        Index = node.index,
-        Name = node.name,
-        Icon = iconUri,
-        RegControlType = node.regControlType,
-        GrayLevelControl = node.grayLevelControl,
-        // UI 專用欄位
-        IsSelected = false,
-        IsGrayLevelVisible = node.regControlType != null && node.regControlType.Contains("grayLevelControl")
-    };
-    Patterns.Add(item);
-}
+Profile JSON ──▶ PatternNode ──▶ PatternItem ──▶ ViewModel + XAML
+   │                   │                  │
+   │                   │                  ├───▶ IsGrayLevelVisible → 控制顯示 GroupBox
+   │                   │                  ├───▶ GrayLevelControl → 傳給 GrayLevelVM.LoadFrom()
+   │                   │                  └───▶ RegControlType → 決定支援哪些控制模組
