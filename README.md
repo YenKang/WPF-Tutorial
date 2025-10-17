@@ -1,20 +1,5 @@
-private static int ResolveSrc(string src, int r, int g, int b)
-{
-    if (string.IsNullOrEmpty(src))
-        return 0;
-
-    switch (src)
-    {
-        case "R":
-            return r;
-        case "G":
-            return g;
-        case "B":
-            return b;
-        default:
-            int v;
-            if (TryParseInt(src, out v))
-                return v;
-            return 0;
-    }
-}
+"writes": [
+  { "mode": "rmw", "target": "BIST_GrayColor_VH_Reverse", "mask": "0x01", "shift": 0, "src": "R" },
+  { "mode": "rmw", "target": "BIST_GrayColor_VH_Reverse", "mask": "0x02", "shift": 1, "src": "G" },
+  { "mode": "rmw", "target": "BIST_GrayColor_VH_Reverse", "mask": "0x04", "shift": 2, "src": "B" }
+]
