@@ -1,43 +1,30 @@
-private void ExecuteWrite()
+private static int ResolveSrc(string src, int d2, int d1, int d0, byte low, byte high)
 {
-    // 先把三個值組成 10-bit Gray，並算出 Low/High
-    int d2 = (D2 ?? 0) & 0x3;
-    int d1 = (D1 ?? 0) & 0xF;
-    int d0 = (D0 ?? 0) & 0xF;
-    int gray10 = (d2 << 8) | (d1 << 4) | d0;
-    byte low  = (byte)(gray10 & 0xFF);
-    byte high = (byte)((gray10 >> 8) & 0xFF);
-
-    // 沒有 JSON（或沒 writes）就走既有「寫死」邏輯，避免壞掉
-    var writes = _cfg?["writes"] as JArray;
-    if (writes == null || writes.Count == 0)
+    if (string.IsNullOrEmpty(src)) return 0;
+    switch (src)
     {
-        LegacyWrite(d2, d1, d0, low);
-        return;
+        case "D2": return d2;
+        case "D1": return d1;
+        case "D0": return d0;
+        case "LowByte":  return low;
+        case "HighByte": return high;
+        default:
+            int v;
+            return TryParseInt(src, out v) ? v : 0; // 也允許常數
     }
+}
 
-    // 依 JSON 的每一筆 write 執行
-    foreach (JObject w in writes)
-    {
-        string mode   = (string)w["mode"]   ?? "write8";
-        string target = (string)w["target"];
-        if (string.IsNullOrEmpty(target)) continue;
+private static bool TryParseInt(string s, out int v)
+{
+    v = 0;
+    if (string.IsNullOrWhiteSpace(s)) return false;
+    s = s.Trim();
+    if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        return int.TryParse(s.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out v);
+    return int.TryParse(s, out v);
+}
 
-        int srcVal = ResolveSrc((string)w["src"], d2, d1, d0, low, high);
-
-        if (mode == "write8")
-        {
-            RegMap.Write8(target, (byte)(srcVal & 0xFF));
-        }
-        else if (mode == "rmw")
-        {
-            int mask  = ParseInt((string)w["mask"]);   // 支援 "0x0C" / "12"
-            int shift = (int?)w["shift"] ?? 0;
-
-            byte cur  = RegMap.Read8(target);
-            byte next = (byte)((cur & ~(mask & 0xFF)) | (((srcVal << shift) & mask) & 0xFF));
-            RegMap.Write8(target, next);
-        }
-        // 之後要擴充 write16/rmw16... 再加分支
-    }
+private static int ParseInt(string s)
+{
+    int v; return TryParseInt(s, out v) ? v : 0;
 }
