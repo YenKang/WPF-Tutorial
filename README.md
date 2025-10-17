@@ -1,30 +1,14 @@
+private void ApplyPatternToGroups(PatternItem p)
 {
-  "index": 11,
-  "name": "Cursor",
-  "icon": "P11_Cursor.png",
-  "regControlType": ["grayLevelControl", "bgGrayLevelControl"],
+    var types = p?.RegControlType ?? new List<string>();
 
-  "grayLevelControl": {
-    "fields": {
-      "D2": { "min": 0, "max": 3,  "default": 3 },
-      "D1": { "min": 0, "max": 15, "default": 15 },
-      "D0": { "min": 0, "max": 15, "default": 15 }
-    },
-    "writes": [
-      { "mode": "write8", "target": "BIST_PT_LEVEL",    "src": "LowByte" },
-      { "mode": "rmw",    "target": "BIST_CK_GY_FK_PT", "mask":"0x03", "shift":0, "src":"D2" }
-    ]
-  },
+    // 原本：前景灰階
+    IsGrayLevelVisible = types.Contains("grayLevelControl");
+    if (IsGrayLevelVisible && p?.GrayLevelControl != null)
+        GrayLevelVM.LoadFrom(p.GrayLevelControl);
 
-  "bgGrayLevelControl": {
-    "fields": {
-      "D2": { "min": 0, "max": 3,  "default": 1 },
-      "D1": { "min": 0, "max": 15, "default": 8 },
-      "D0": { "min": 0, "max": 15, "default": 0 }
-    },
-    "writes": [
-      { "mode": "write8", "target": "BIST_BG_PT_LEVEL", "src": "LowByte" },
-      { "mode": "rmw",    "target": "BIST_BG_CTL",      "mask":"0x03", "shift":0, "src":"D2" }
-    ]
-  }
+    // 新增：背景灰階
+    IsBgGrayLevelVisible = types.Contains("bgGrayLevelControl");
+    if (IsBgGrayLevelVisible && p?.BgGrayLevelControl != null)
+        BgGrayLevelVM.LoadFrom(p.BgGrayLevelControl);
 }
