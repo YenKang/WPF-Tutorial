@@ -2,22 +2,49 @@
 <TextBlock Grid.Row="1" Grid.Column="0" Text="P1" VerticalAlignment="Center"/>
 
 <!-- R -->
-<Border Grid.Row="1" Grid.Column="1" BorderBrush="Red" BorderThickness="0 0 0 2">
-  <ComboBox ItemsSource="{Binding FlickerRGBVM.Planes[0].LevelOptions}"
-            SelectedItem="{Binding FlickerRGBVM.Planes[0].R, Mode=TwoWay}"
-            ItemStringFormat="{}{0:X}" Width="70"/>
-</Border>
+<ComboBox Grid.Row="1" Grid.Column="1"
+          ItemsSource="{Binding FlickerRGBVM.Planes[0].LevelOptions}"
+          SelectedItem="{Binding FlickerRGBVM.Planes[0].R, Mode=TwoWay}"
+          ItemStringFormat="{}{0:X}"
+          Width="70" Margin="1">
+  <ComboBox.Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="BorderBrush" Value="Red"/>
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="Foreground" Value="Red"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+  </ComboBox.Style>
+</ComboBox>
 
 <!-- G -->
-<Border Grid.Row="1" Grid.Column="2" BorderBrush="Green" BorderThickness="0 0 0 2">
-  <ComboBox ItemsSource="{Binding FlickerRGBVM.Planes[0].LevelOptions}"
-            SelectedItem="{Binding FlickerRGBVM.Planes[0].G, Mode=TwoWay}"
-            ItemStringFormat="{}{0:X}" Width="70"/>
-</Border>
+<ComboBox Grid.Row="1" Grid.Column="2"
+          ItemsSource="{Binding FlickerRGBVM.Planes[0].LevelOptions}"
+          SelectedItem="{Binding FlickerRGBVM.Planes[0].G, Mode=TwoWay}"
+          ItemStringFormat="{}{0:X}"
+          Width="70" Margin="1">
+  <ComboBox.Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="BorderBrush" Value="Green"/>
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="Foreground" Value="Green"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+  </ComboBox.Style>
+</ComboBox>
 
 <!-- B -->
-<Border Grid.Row="1" Grid.Column="3" BorderBrush="Blue" BorderThickness="0 0 0 2">
-  <ComboBox ItemsSource="{Binding FlickerRGBVM.Planes[0].LevelOptions}"
-            SelectedItem="{Binding FlickerRGBVM.Planes[0].B, Mode=TwoWay}"
-            ItemStringFormat="{}{0:X}" Width="70"/>
-</Border>
+<ComboBox Grid.Row="1" Grid.Column="3"
+          ItemsSource="{Binding FlickerRGBVM.Planes[0].LevelOptions}"
+          SelectedItem="{Binding FlickerRGBVM.Planes[0].B, Mode=TwoWay}"
+          ItemStringFormat="{}{0:X}"
+          Width="70" Margin="1">
+  <ComboBox.Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="BorderBrush" Value="Blue"/>
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="Foreground" Value="Blue"/>
+      <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+  </ComboBox.Style>
+</ComboBox>
