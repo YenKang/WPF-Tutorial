@@ -2,80 +2,82 @@ using System;
 using System.Globalization;
 using Newtonsoft.Json.Linq;
 
-private static void ParsePositionField(
-    JToken field,
-    out bool visible, out int def,
-    out int min, out int max,
-    out string lowTarget, out string highTarget,
-    out byte highMask, out int highShift,
-    byte defaultMaskIfMissing)
+public void LoadFrom(object json)
 {
-    // 預設輸出
-    visible    = false;
-    def        = 0;
-    min        = 0;
-    max        = 0;
-    lowTarget  = null;
-    highTarget = null;
-    highMask   = 0;
-    highShift  = 0;
+    // 先清空成預設（你原本的 Reset()）
+    Reset();
 
-    var fo = field as JObject;
-    if (fo == null) return;
+    var jo = json as JObject;
+    if (jo == null) return;
 
-    // 基本欄位
-    var visTok = fo["visible"];
-    visible = visTok != null && visTok.Type != JTokenType.Null && visTok.Value<bool>();
+    // 讀 Title 與 Target
+    var t = jo["title"];
+    if (t != null) Title = (string)t;
 
-    min = (int?)(fo["min"]) ?? 0;
-    max = (int?)(fo["max"]) ?? 0;
-    def = (int?)(fo["default"]) ?? 0;
-    if (def < min) def = min;
-    else if (def > max) def = max;
+    var tgt = jo["target"];
+    if (tgt != null) _target = (string)tgt;
 
-    // write.low / write.high
-    var write = fo["write"] as JObject;
-    if (write == null) return;
+    // 讀 fields
+    var fields = jo["fields"] as JObject;
+    if (fields == null) return;
 
-    var low = write["low"] as JObject;
-    if (low != null)
-        lowTarget = (string)low["target"];
+    // ---- 可見性旗標（四個 bit 對應 UI 是否顯示）----
+    ShowLineSel  = fields["lineSel"]    != null && fields["lineSel"]["visible"]    != null && fields["lineSel"]["visible"].Value<bool>();
+    ShowExclamBg = fields["exclamBg"]   != null && fields["exclamBg"]["visible"]   != null && fields["exclamBg"]["visible"].Value<bool>();
+    ShowDiagonal = fields["diagonalEn"] != null && fields["diagonalEn"]["visible"] != null && fields["diagonalEn"]["visible"].Value<bool>();
+    ShowCursor   = fields["cursorEn"]   != null && fields["cursorEn"]["visible"]   != null && fields["cursorEn"]["visible"].Value<bool>();
 
-    var high = write["high"] as JObject;
-    if (high != null)
+    // ---- bit mask（缺省值用預設）與 default ----
+    _mLine   = ReadMask(fields["lineSel"],    0x20); // B5
+    _mExclam = ReadMask(fields["exclamBg"],   0x10); // B4
+    _mDiag   = ReadMask(fields["diagonalEn"], 0x08); // B3
+    _mCursor = ReadMask(fields["cursorEn"],   0x04); // B2
+
+    LineSelWhite  = ReadDefault01(fields["lineSel"])    == 1;
+    ExclamWhiteBG = ReadDefault01(fields["exclamBg"])   == 1;
+    DiagonalEn    = ReadDefault01(fields["diagonalEn"]) == 1;
+    CursorEn      = ReadDefault01(fields["cursorEn"])   == 1;
+
+    // ---- Cursor Position（可選）----
+    bool show; int def, min, max; string low, high; byte mask; int shift;
+
+    // HPos：高位 mask 缺省給 0x1F（對應 12..8 五個 bit）
+    if (fields["hPos"] != null)
     {
-        highTarget = (string)high["target"];
+        ParsePositionField(fields["hPos"],
+            out show, out def, out min, out max,
+            out low, out high, out mask, out shift,
+            0x1F);
 
-        // 解析 mask（十六進位字串或缺省）
-        string maskStr = (string)high["mask"];
-        if (string.IsNullOrWhiteSpace(maskStr))
-        {
-            highMask = defaultMaskIfMissing;
-        }
-        else
-        {
-            if (maskStr.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                maskStr = maskStr.Substring(2);
-
-            byte parsed;
-            if (byte.TryParse(maskStr, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out parsed))
-                highMask = parsed;
-            else
-                highMask = defaultMaskIfMissing;
-        }
-
-        // 解析 shift（可省略；省略時由 mask 推算最低位）
-        int? shiftNullable = (int?)high["shift"];
-        if (shiftNullable.HasValue)
-        {
-            highShift = shiftNullable.Value;
-        }
-        else
-        {
-            int s = 0;
-            byte m = highMask;
-            while (s < 8 && ((m >> s) & 1) == 0) s++;
-            highShift = s;
-        }
+        ShowHPos     = show;
+        HPos         = def;
+        _hMin        = min;
+        _hMax        = max;
+        _hLowTarget  = low;
+        _hHighTarget = high;
+        _hMask       = mask;
+        _hShift      = shift;
     }
+
+    // VPos：高位 mask 缺省給 0x0F（對應 11..8 四個 bit）
+    if (fields["vPos"] != null)
+    {
+        ParsePositionField(fields["vPos"],
+            out show, out def, out min, out max,
+            out low, out high, out mask, out shift,
+            0x0F);
+
+        ShowVPos     = show;
+        VPos         = def;
+        _vMin        = min;
+        _vMax        = max;
+        _vLowTarget  = low;
+        _vHighTarget = high;
+        _vMask       = mask;
+        _vShift      = shift;
+    }
+
+    // 讓綁定到 IsHPosVisible / IsVPosVisible 的元素立刻刷新
+    OnPropertyChanged("IsHPosVisible");
+    OnPropertyChanged("IsVPosVisible");
 }
