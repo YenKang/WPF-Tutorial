@@ -9,7 +9,7 @@
     "title": "Exclamation Background",
     "target": "BIST_Line_ExclamBG_Cursor",
     "fields": {
-      "exclamBg": { "mask": "0x10", "default": 1, "visible": true }  // 1=White, 0=Black
+      "exclamBg": { "mask": "0x10", "default": 1, "visible": true }  // 1=White BG, 0=Black BG
     }
   }
 }
