@@ -1,7 +1,10 @@
-"Registers": {
-  "BIST_Line_ExclamBG_Cursor": "0x0018",
-  "BIST_CURSOR_HPOS_LO": "0x0045",
-  "BIST_CURSOR_HPOS_HI": "0x0046",
-  "BIST_CURSOR_VPOS_LO": "0x0047",
-  "BIST_CURSOR_VPOS_HI": "0x0048"
-}
+// === Cursor Position ===
+public bool ShowHPos { get => GetValue<bool>(); private set => SetValue(value); }
+public bool ShowVPos { get => GetValue<bool>(); private set => SetValue(value); }
+
+public int HPos { get => GetValue<int>(); set => SetValue(value); }
+public int VPos { get => GetValue<int>(); set => SetValue(value); }
+
+private int _hMin, _hMax, _vMin, _vMax;
+private string _hLowTarget, _hHighTarget, _vLowTarget, _vHighTarget;
+private byte _hMask, _vMask;
