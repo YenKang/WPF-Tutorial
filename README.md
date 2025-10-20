@@ -1,30 +1,36 @@
-// ---- Cursor Position (optional) ----
-if (fields?["hPos"] != null)
-{
-    bool show; int def, min, max; string lowTarget, highTarget; byte mask;
-    ParsePositionField(fields["hPos"], out show, out def,
-        out min, out max, out lowTarget, out highTarget, out mask, 0x1F);
+<GroupBox Header="Cursor / Diagonal"
+          Visibility="{Binding IsLineExclamCursorVisible,
+                               Converter={StaticResource BoolToVisibilityConverter}}">
+  <StackPanel Margin="6">
 
-    ShowHPos      = show;   // 是否顯示 HPos 控件
-    HPos          = def;    // 預設值
-    _hMin         = min;
-    _hMax         = max;
-    _hLowTarget   = lowTarget;   // 如 "BIST_CURSOR_HPOS_LO" (0045h)
-    _hHighTarget  = highTarget;  // 如 "BIST_CURSOR_HPOS_HI" (0046h)
-    _hMask        = mask;        // 高位有效遮罩（HPOS 用 0x1F）
-}
+    <!-- 1️⃣ 開關 -->
+    <CheckBox Content="Cursor Configurable Enable"
+              IsChecked="{Binding LineExclamCursorVM.CursorEn, Mode=TwoWay}"
+              Margin="0,0,0,6"/>
+    <CheckBox Content="Diagonal Enable"
+              IsChecked="{Binding LineExclamCursorVM.DiagonalEn, Mode=TwoWay}"
+              Margin="0,0,0,6"/>
 
-if (fields?["vPos"] != null)
-{
-    bool show; int def, min, max; string lowTarget, highTarget; byte mask;
-    ParsePositionField(fields["vPos"], out show, out def,
-        out min, out max, out lowTarget, out highTarget, out mask, 0x0F);
+    <!-- 2️⃣ Cursor Position: Horizontal -->
+    <StackPanel Orientation="Horizontal"
+                Visibility="{Binding LineExclamCursorVM.IsHPosVisible,
+                                     Converter={StaticResource BoolToVisibilityConverter}}">
+      <TextBlock Text="Cursor H Pos:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+      <TextBox Width="100"
+               Text="{Binding LineExclamCursorVM.HPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+    </StackPanel>
 
-    ShowVPos      = show;   // 是否顯示 VPos 控件
-    VPos          = def;    // 預設值
-    _vMin         = min;
-    _vMax         = max;
-    _vLowTarget   = lowTarget;   // 如 "BIST_CURSOR_VPOS_LO" (0047h)
-    _vHighTarget  = highTarget;  // 如 "BIST_CURSOR_VPOS_HI" (0048h)
-    _vMask        = mask;        // 高位有效遮罩（VPOS 用 0x0F）
-}
+    <!-- 3️⃣ Cursor Position: Vertical -->
+    <StackPanel Orientation="Horizontal"
+                Visibility="{Binding LineExclamCursorVM.IsVPosVisible,
+                                     Converter={StaticResource BoolToVisibilityConverter}}">
+      <TextBlock Text="Cursor V Pos:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+      <TextBox Width="100"
+               Text="{Binding LineExclamCursorVM.VPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+    </StackPanel>
+
+    <!-- 4️⃣ Set 按鈕 -->
+    <Button Content="Set" Width="80" Height="28" Margin="0,10,0,0"
+            Command="{Binding LineExclamCursorVM.ApplyCommand}"/>
+  </StackPanel>
+</GroupBox>
