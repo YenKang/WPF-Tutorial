@@ -1,47 +1,26 @@
-<!-- 🔹Auto-Run 設定 GroupBox -->
-<GroupBox Header="Auto-Run Config"
-          Visibility="{Binding IsAutoRunConfigVisible,
-                               Converter={StaticResource BoolToVisibilityConverter}}"
-          Margin="0,12,0,0"
-          DataContext="{Binding AutoRunVM}">
-  <StackPanel Margin="8">
+{
+  "index": 90,
+  "name": "Auto Run Config",
+  "icon": "AutoRun.png",
+  "regControlType": ["autoRunControl"],
+  "autoRunControl": {
+    "title": "Auto Run",
+    "total": { "min": 1, "max": 22, "default": 22, "target": "BIST_PT_TOTAL" },
 
-    <!-- 🟢 Auto-Run Pattern Total -->
-    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-      <TextBlock Text="Pattern Total:" VerticalAlignment="Center" Width="120"/>
-      <ComboBox Width="100"
-                ItemsSource="{Binding TotalOptions}"
-                SelectedItem="{Binding Total, Mode=TwoWay}"/>
-    </StackPanel>
+    "orders": {
+      "targets": [
+        "BIST_PT_ORD0","BIST_PT_ORD1","BIST_PT_ORD2","BIST_PT_ORD3","BIST_PT_ORD4",
+        "BIST_PT_ORD5","BIST_PT_ORD6","BIST_PT_ORD7","BIST_PT_ORD8","BIST_PT_ORD9",
+        "BIST_PT_ORD10","BIST_PT_ORD11","BIST_PT_ORD12","BIST_PT_ORD13","BIST_PT_ORD14",
+        "BIST_PT_ORD15","BIST_PT_ORD16","BIST_PT_ORD17","BIST_PT_ORD18","BIST_PT_ORD19",
+        "BIST_PT_ORD20","BIST_PT_ORD21"
+      ],
+      "defaults": [ 0, 1, 4, 4, 3 ]
+    },
 
-    <!-- 🟢 Flicker Counter (FCNT1 / FCNT2) -->
-    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-      <TextBlock Text="FCNT1:" VerticalAlignment="Center" Width="60"/>
-      <TextBox Width="80" Text="{Binding Fcnt1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-      <TextBlock Text="   FCNT2:" VerticalAlignment="Center"/>
-      <TextBox Width="80" Text="{Binding Fcnt2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-    </StackPanel>
+    "fcnt1": { "default": "0x03C", "targets": { "low":"BIST_FCNT1_LO", "high":"BIST_FCNT1_HI", "mask":"0x03", "shift":8 } },
+    "fcnt2": { "default": "0x01E", "targets": { "low":"BIST_FCNT2_LO", "high":"BIST_FCNT2_HI", "mask":"0x0C", "shift":10 } },
 
-    <!-- 🟢 Auto-Run Orders (依 Pattern 數量產生) -->
-    <ItemsControl ItemsSource="{Binding Orders}">
-      <ItemsControl.ItemTemplate>
-        <DataTemplate>
-          <StackPanel Orientation="Horizontal" Margin="0,2">
-            <TextBlock Text="{Binding Index, StringFormat='ORD{0:D2}:'}" Width="70" VerticalAlignment="Center"/>
-            <ComboBox Width="160"
-                      ItemsSource="{Binding DataContext.PatternIndexOptions,
-                                            RelativeSource={RelativeSource AncestorType=GroupBox}}"
-                      SelectedItem="{Binding SelectedIndex, Mode=TwoWay}"/>
-          </StackPanel>
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
-
-    <!-- 🟢 Apply 按鈕 -->
-    <Button Content="Set Auto-Run"
-            Command="{Binding ApplyCommand}"
-            Width="140" Height="30"
-            HorizontalAlignment="Left"
-            Margin="0,10,0,0"/>
-  </StackPanel>
-</GroupBox>
+    "trigger": { "target": "BIST_PT", "value": "0x3F" }
+  }
+}
