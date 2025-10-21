@@ -11,9 +11,7 @@ using Newtonsoft.Json.Linq;
 /// </summary>
 public sealed class AutoRunVM : ViewModelBase
 {
-    // ──────────────────────────────
-    // 常數設定（上下界與位元遮罩）
-    // ──────────────────────────────
+    // 常數
     private const int TotalMinDefault = 1;
     private const int TotalMaxDefault = 22;
     private const int TotalDefault    = 5;
@@ -21,18 +19,13 @@ public sealed class AutoRunVM : ViewModelBase
     private const byte OrdValueMask   = 0x3F; // 每一格 ORD 只收 6 bits
     private const byte TotalValueMask = 0x1F; // TOTAL 只收 5 bits
 
-    // ──────────────────────────────
-    // 暫存器目標位址（由 JSON 載入）
-    // ──────────────────────────────
-    private string _totalTarget;               // BIST_PT_TOTAL
+    // 暫存器目標（由 JSON 載入）
+    private string _totalTarget;                 // BIST_PT_TOTAL
     private string[] _orderTargets = new string[0]; // BIST_PT_ORD0..ORD21
-    private string _triggerTarget;             // BIST_PT
-    private byte _triggerValue;                // e.g. 0x3F
+    private string _triggerTarget;               // BIST_PT
+    private byte _triggerValue;                  // e.g. 0x3F
 
-    // ──────────────────────────────
     // 公開集合 (供 XAML 綁定)
-    // ──────────────────────────────
-
     /// <summary>候選 pattern index（由外部 BistModeViewModel 填充）</summary>
     public ObservableCollection<int> PatternIndexOptions { get; } =
         new ObservableCollection<int>();
@@ -45,17 +38,14 @@ public sealed class AutoRunVM : ViewModelBase
     public ObservableCollection<OrderSlot> Orders { get; } =
         new ObservableCollection<OrderSlot>();
 
-    // ──────────────────────────────
-    // 可綁定屬性
-    // ──────────────────────────────
-
+    // 可綁定屬性（使用 GetValue/SetValue）
     /// <summary>目前的圖片總數；改變時會同步調整 Orders 筆數與顯示序號</summary>
     public int Total
     {
-        get => Get<int>();
+        get { return GetValue<int>(); }
         set
         {
-            if (!Set(value)) return;
+            if (!SetValue(value)) return;
             ResizeOrders(value);
         }
     }
@@ -63,23 +53,20 @@ public sealed class AutoRunVM : ViewModelBase
     /// <summary>GroupBox 標題（預設 Auto Run）</summary>
     public string Title
     {
-        get => Get<string>() ?? "Auto Run";
-        private set => Set(value ?? "Auto Run");
+        get
+        {
+            var s = GetValue<string>();
+            return string.IsNullOrEmpty(s) ? "Auto Run" : s;
+        }
+        private set { SetValue(string.IsNullOrEmpty(value) ? "Auto Run" : value); }
     }
 
-    // ──────────────────────────────
     // 建構子
-    // ──────────────────────────────
-
     public AutoRunVM()
     {
-        // 起始給一個合宜的總數，畫面一載入就會看到幾個下拉
-        Set(TotalDefault, nameof(Total));
+        // 直接指定屬性，讓 setter 觸發 ResizeOrders
+        Total = TotalDefault;
     }
-
-    // ──────────────────────────────
-    // JSON 載入邏輯
-    // ──────────────────────────────
 
     /// <summary>由 Pattern JSON 讀取 autoRunControl 區塊。</summary>
     public void LoadFrom(JObject autoRunControl)
@@ -88,7 +75,7 @@ public sealed class AutoRunVM : ViewModelBase
 
         Title = (string)autoRunControl["title"] ?? "Auto Run";
 
-        // 讀取 total 設定
+        // total
         var totalObj = autoRunControl["total"] as JObject;
         _totalTarget = (string)totalObj?["target"];
         var totalMin = totalObj?["min"]?.Value<int>() ?? TotalMinDefault;
@@ -97,7 +84,7 @@ public sealed class AutoRunVM : ViewModelBase
 
         Total = Clamp(totalDef, totalMin, totalMax);
 
-        // 讀取 orders
+        // orders
         var ordersObj = autoRunControl["orders"] as JObject;
         _orderTargets = ordersObj?["targets"]?.ToObject<string[]>() ?? new string[0];
         var defaults  = ordersObj?["defaults"]?.ToObject<int[]>() ?? Array.Empty<int>();
@@ -107,20 +94,16 @@ public sealed class AutoRunVM : ViewModelBase
         {
             Orders.Add(new OrderSlot
             {
-                DisplayNo     = i + 1,                        // 使用者看到 1-based
+                DisplayNo     = i + 1,                        // 1-based 顯示
                 SelectedIndex = (i < defaults.Length) ? defaults[i] : 0
             });
         }
 
-        // 讀取 trigger
+        // trigger
         var trig = autoRunControl["trigger"] as JObject;
         _triggerTarget = (string)trig?["target"];
         _triggerValue  = ParseHexByte((string)trig?["value"], 0x3F);
     }
-
-    // ──────────────────────────────
-    // 寫入暫存器（Apply 按鈕）
-    // ──────────────────────────────
 
     /// <summary>將目前設定寫入暫存器並觸發 Auto-Run。</summary>
     public void Apply()
@@ -145,24 +128,17 @@ public sealed class AutoRunVM : ViewModelBase
             RegMap.Write8(_triggerTarget, _triggerValue);
     }
 
-    // ──────────────────────────────
     // 工具函式
-    // ──────────────────────────────
-
-    /// <summary>依 Total 調整 Orders 筆數，並維持顯示序號 1..N。</summary>
     private void ResizeOrders(int desiredCount)
     {
         desiredCount = Clamp(desiredCount, TotalMinDefault, TotalMaxDefault);
 
-        // 增加列
         while (Orders.Count < desiredCount)
             Orders.Add(new OrderSlot { DisplayNo = Orders.Count + 1, SelectedIndex = 0 });
 
-        // 移除多餘列
         while (Orders.Count > desiredCount)
             Orders.RemoveAt(Orders.Count - 1);
 
-        // 校正顯示序號（確保 1..N）
         for (int i = 0; i < Orders.Count; i++)
             Orders[i].DisplayNo = i + 1;
     }
@@ -180,31 +156,23 @@ public sealed class AutoRunVM : ViewModelBase
         var s = hexOrNull.Trim();
         if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
             s = s.Substring(2);
-        if (byte.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out var b))
-            return b;
-        return fallback;
+        byte b;
+        return byte.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out b) ? b : fallback;
     }
-
-    // ──────────────────────────────
-    // 子類別：單列「圖片順序」資料
-    // ──────────────────────────────
 
     /// <summary>一列「圖片順序」下拉所需資料。</summary>
     public sealed class OrderSlot : ViewModelBase
     {
-        /// <summary>顯示用序號（1-based）。</summary>
         public int DisplayNo
         {
-            get => Get<int>();
-            set => Set(value);
+            get { return GetValue<int>(); }
+            set { SetValue(value); }
         }
 
-        /// <summary>選到的圖碼（pattern index）。</summary>
         public int SelectedIndex
         {
-            get => Get<int>();
-            set => Set(value);
+            get { return GetValue<int>(); }
+            set { SetValue(value); }
         }
     }
 }
-
