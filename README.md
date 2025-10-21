@@ -9,3 +9,20 @@
 
 public ObservableCollection<PatternOption> PatternOptions { get; }
     = new ObservableCollection<PatternOption>();
+
+
+
+＝＝＝＝＝
+// AfterProfileLoaded()
+if (AutoRunVM.PatternOptions.Count == 0)
+{
+    AutoRunVM.PatternOptions.Clear();
+    foreach (var p in Patterns.OrderBy(x => x.Index))
+    {
+        AutoRunVM.PatternOptions.Add(new AutoRunVM.PatternOption
+        {
+            Index = p.Index,
+            Display = $"{p.Index} - {p.Name}"
+        });
+    }
+}
