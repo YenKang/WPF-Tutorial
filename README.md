@@ -1,28 +1,24 @@
-<ComboBox Width="160"
-          ItemsSource="{Binding DataContext.AutoRunVM.PatternOptions,
-                                RelativeSource={RelativeSource AncestorType=GroupBox}}"
-          DisplayMemberPath="Display"
-          SelectedValuePath="Index"
-          SelectedValue="{Binding SelectedIndex, Mode=TwoWay}" />
-
-＝＝＝＝＝＝
-
-public ObservableCollection<PatternOption> PatternOptions { get; }
-    = new ObservableCollection<PatternOption>();
-
-
-
-＝＝＝＝＝
-// AfterProfileLoaded()
-if (AutoRunVM.PatternOptions.Count == 0)
+public void Apply()
 {
-    AutoRunVM.PatternOptions.Clear();
-    foreach (var p in Patterns.OrderBy(x => x.Index))
+    // 1) 寫入總數：硬體定義 = (張數 - 1)
+    if (!string.IsNullOrEmpty(_totalTarget))
     {
-        AutoRunVM.PatternOptions.Add(new AutoRunVM.PatternOption
-        {
-            Index = p.Index,
-            Display = $"{p.Index} - {p.Name}"
-        });
+        var encoded = Math.Max(0, Total - 1) & TotalValueMask; // 確保不為負
+        RegMap.Write8(_totalTarget, (byte)encoded);
     }
+
+    // 2) 寫入 ORD0..ORD(Total-1)（這段不用改）
+    var count = Math.Min(Total, _orderTargets.Length);
+    for (int i = 0; i < count; i++)
+    {
+        var target = _orderTargets[i];
+        if (string.IsNullOrEmpty(target)) continue;
+
+        var code = (byte)(Orders[i].SelectedIndex & OrdValueMask);
+        RegMap.Write8(target, code);
+    }
+
+    // 3) 觸發（不變）
+    if (!string.IsNullOrEmpty(_triggerTarget))
+        RegMap.Write8(_triggerTarget, _triggerValue);
 }
