@@ -1,4 +1,35 @@
-Commit Summary — Dynamic Pattern Selection & Frame-Count (FCNT1/FCNT2) Control Implemented
+{
+  "patterns": [
+    {
+      "name": "Chessboard",
+      "fields": [
+        { "key": "H_RES", "default": 1920 },
+        { "key": "V_RES", "default": 720 },
+        { "key": "M", "default": 5, "min": 2, "max": 40 },
+        { "key": "N", "default": 7, "min": 2, "max": 40 }
+      ],
 
-🔹 1. Dynamic Pattern Selection
-	•	The Auto-Run panel now automatically gener
+      "chessH": {
+        "writes": [
+          { "mode": "write8", "target": "BIST_CHESSBOARD_H_TOGGLE_W_L", "src": "lowByte" },
+          { "mode": "rmw",    "target": "BIST_CHESSBOARD_H_TOGGLE_W_H", "mask": "0x1F", "shift": 0, "src": "highByte" },
+          { "mode": "write8", "target": "BIST_CHESSBOARD_H_PLUS1_BLKNUM","src": "lowByte" }
+        ]
+      },
+
+      "chessV": {
+        "writes": [
+          { "mode": "write8", "target": "BIST_CHESSBOARD_V_TOGGLE_W_L", "src": "lowByte" },
+          { "mode": "rmw",    "target": "BIST_CHESSBOARD_V_TOGGLE_W_H", "mask": "0x0F", "shift": 0, "src": "highByte" },
+          { "mode": "write8", "target": "BIST_CHESSBOARD_V_PLUS1_BLKNUM","src": "lowByte" }
+        ]
+      },
+
+      "patternSelect": {
+        "writes": [
+          { "mode": "rmw", "target": "BIST_PT", "mask": "0x3F", "shift": 0, "src": "lowByte" }
+        ]
+      }
+    }
+  ]
+}
