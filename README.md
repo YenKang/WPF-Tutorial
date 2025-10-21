@@ -1,65 +1,73 @@
-<!-- ===================== Auto Run ===================== -->
-<GroupBox Header="Auto Run"
-         Margin="0,12,0,0"
-         Visibility="{Binding IsAutoRunConfigVisible,
-                              Converter={StaticResource BoolToVisibilityConverter}}">
-  <StackPanel Margin="12" Orientation="Vertical" >
+public class BistModeViewModel : ViewModelBase
+{
+    public ObservableCollection<PatternItem> Patterns { get; } 
+        = new ObservableCollection<PatternItem>();
 
-    <!-- Total (1~22) -->
-    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-      <TextBlock Text="Total images:" VerticalAlignment="Center" Margin="0,0,8,0"/>
-      <ComboBox Width="80"
-                ItemsSource="{Binding AutoRunVM.TotalOptions}"
-                SelectedItem="{Binding AutoRunVM.Total, Mode=TwoWay}"/>
-    </StackPanel>
+    public PatternItem SelectedPattern
+    {
+        get => _selectedPattern;
+        set
+        {
+            if (_selectedPattern == value) return;
+            _selectedPattern = value;
+            SetValue(value);
+            ApplyPatternToGroups(_selectedPattern);
+        }
+    }
 
-    <!-- Orders（動態產生 ORD0..ORD(N-1)；每列一個 ComboBox） -->
-    <ItemsControl ItemsSource="{Binding AutoRunVM.Orders}"
-                  AlternationCount="100">
-      <ItemsControl.ItemTemplate>
-        <DataTemplate>
-          <Grid Margin="0,2">
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="120"/>
-              <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+    public AutoRunVM AutoRunVM { get; } = new AutoRunVM();
+    public bool IsAutoRunConfigVisible
+    {
+        get => GetValue<bool>();
+        set => SetValue(value);
+    }
 
-            <!-- 左邊標籤：ORD# -->
-            <TextBlock Grid.Column="0"
-                       VerticalAlignment="Center"
-                       Text="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl},
-                                      Path=(ItemsControl.AlternationIndex),
-                                      StringFormat=ORD{0}}"/>
+    // 🟩 這是你的 Profile 載入方法
+    public void LoadProfileFromFile(string path)
+    {
+        _profile = JsonConfigUiRunner.LoadRoot(path);
 
-            <!-- 右邊：選圖（SelectedItem 綁定到目前這個 Orders 的元素值本身） -->
-            <ComboBox Grid.Column="1" Width="160"
-                      ItemsSource="{Binding DataContext.AutoRunVM.PatternIndexOptions,
-                                            RelativeSource={RelativeSource AncestorType=GroupBox}}"
-                      SelectedItem="{Binding ., Mode=TwoWay}"
-                      ToolTip="Pattern index (0~63), 依實際提供的清單為準"/>
-          </Grid>
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
+        Patterns.Clear();
+        foreach (var node in _profile.Patterns)
+        {
+            Patterns.Add(new PatternItem
+            {
+                Index = node.index,
+                Name = node.name,
+                IconUri = ResolveIcon(node.icon),
+                RegControlType = node.regControlType ?? new List<string>(),
+                AutoRunControl = node.autoRunControl
+            });
+        }
 
-    <Separator Margin="0,10,0,10"/>
+        // ✅ 在這裡呼叫 AfterProfileLoaded()
+        AfterProfileLoaded();
+    }
 
-    <!-- FCNT1 / FCNT2 -->
-    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-      <TextBlock Text="FCNT1:" VerticalAlignment="Center" Margin="0,0,6,0"/>
-      <TextBox Width="80"
-               Text="{Binding AutoRunVM.FCNT1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-               ToolTip="建議：0x3C=60 frames（1 sec）"/>
-      <TextBlock Text="   FCNT2:" VerticalAlignment="Center" Margin="12,0,6,0"/>
-      <TextBox Width="80"
-               Text="{Binding AutoRunVM.FCNT2, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-               ToolTip="建議：0x1E=30 frames（0.5 sec）"/>
-    </StackPanel>
+    // 🟩 這是你的 ApplyPatternToGroups()
+    private void ApplyPatternToGroups(PatternItem p)
+    {
+        var types = p?.RegControlType ?? new List<string>();
 
-    <!-- 套用 -->
-    <Button Content="Set"
-            Width="90" Height="30"
-            HorizontalAlignment="Left"
-            Command="{Binding AutoRunVM.ApplyCommand}"/>
-  </StackPanel>
-</GroupBox>
+        // AutoRun 顯示條件
+        IsAutoRunConfigVisible = types.Any(t =>
+            string.Equals(t?.Trim(), "autoRunControl", StringComparison.OrdinalIgnoreCase));
+
+        if (IsAutoRunConfigVisible && p?.AutoRunControl != null)
+            AutoRunVM.LoadFrom((JObject)p.AutoRunControl);
+        else
+            IsAutoRunConfigVisible = false;
+    }
+
+    // 🟩 ✅ 把 AfterProfileLoaded 放在這裡（class 內）
+    private void AfterProfileLoaded()
+    {
+        // 1️⃣ 供 AutoRun 使用的 pattern index 選項
+        AutoRunVM.PatternIndexOptions.Clear();
+        foreach (var p in Patterns.OrderBy(x => x.Index))
+            AutoRunVM.PatternIndexOptions.Add(p.Index);
+
+        // 2️⃣ 預設隱藏 AutoRun 區塊
+        IsAutoRunConfigVisible = false;
+    }
+}
