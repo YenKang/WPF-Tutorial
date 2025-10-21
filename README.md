@@ -1,9 +1,12 @@
-<!-- Auto-Run Config -->
+xmlns:vm="clr-namespace:BistMode.ViewModels"
+
 <GroupBox Header="Auto-Run Config"
-         Visibility="{Binding IsAutoRunConfigVisible, Converter={StaticResource BoolToVisibilityConverter}}"
-         Margin="0,12,0,0">
+          Visibility="{Binding IsAutoRunConfigVisible,
+                               Converter={StaticResource BoolToVisibilityConverter}}"
+          Margin="0,12,0,0">
+  <!-- 整個群組直接綁 AutoRunVM 當 DataContext -->
   <StackPanel Margin="12" DataContext="{Binding AutoRunVM}">
-    
+
     <!-- Pattern Total -->
     <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
       <TextBlock Text="Pattern Total:" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -12,29 +15,26 @@
                 SelectedItem="{Binding Total, Mode=TwoWay}"/>
     </StackPanel>
 
-    <!-- Orders: 依 Total 動態顯示 -->
-    <ItemsControl ItemsSource="{Binding Orders}">
+    <!-- ORD0..ORD(Total-1) -->
+    <ItemsControl ItemsSource="{Binding Orders}" AlternationCount="200">
       <ItemsControl.ItemTemplate>
         <DataTemplate>
-          <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
-            <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, 
-                                      Path=TemplatedParent.DataContext.(local:AutoRunVM.Title)}" Visibility="Collapsed"/>
-            <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=ContentPresenter}, 
-                                      Path=ContentPresenter.ContentTemplateSelector}" Visibility="Collapsed"/>
-            <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=Items.CurrentPosition}" Visibility="Collapsed"/>
-            <TextBlock Text="{Binding}" Visibility="Collapsed"/>
-            <TextBlock Text="ORD" Margin="0,0,4,0" VerticalAlignment="Center"/>
-            <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=ContentPresenter}, Path=ContentPresenter.ContentIndex}"
-                       VerticalAlignment="Center" Margin="0,0,8,0"/>
-            <ComboBox Width="100"
-                      ItemsSource="{Binding DataContext.PatternIndexOptions, RelativeSource={RelativeSource AncestorType=GroupBox}}"
+          <StackPanel Orientation="Horizontal" Margin="0,2">
+            <!-- 用 AlternationIndex 當作顯示的序號 -->
+            <TextBlock Width="70" VerticalAlignment="Center"
+                       Text="{Binding (ItemsControl.AlternationIndex),
+                                      RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=ContentPresenter},
+                                      StringFormat=ORD{0:D2}:}"/>
+            <ComboBox Width="160"
+                      ItemsSource="{Binding DataContext.PatternIndexOptions,
+                                            RelativeSource={RelativeSource AncestorType=GroupBox}}"
                       SelectedItem="{Binding Mode=TwoWay}"/>
           </StackPanel>
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
-    <!-- FCNT：三個 16 進位 digit（FCNT1 / FCNT2） -->
+    <!-- FCNT1 / FCNT2 三位 16 進位 digit -->
     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
       <TextBlock Text="FCNT1:" VerticalAlignment="Center" Margin="0,0,6,0"/>
       <ComboBox Width="55" ItemsSource="{Binding FcntD2Options}" SelectedItem="{Binding FCNT1_D2, Mode=TwoWay}" ItemStringFormat="{}{0:X}" Margin="0,0,4,0"/>
