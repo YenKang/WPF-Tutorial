@@ -4,3 +4,8 @@
           DisplayMemberPath="Display"
           SelectedValuePath="Index"
           SelectedValue="{Binding SelectedIndex, Mode=TwoWay}" />
+
+＝＝＝＝＝＝
+
+public ObservableCollection<PatternOption> PatternOptions { get; }
+    = new ObservableCollection<PatternOption>();
