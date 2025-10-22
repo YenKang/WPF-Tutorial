@@ -7,15 +7,13 @@ namespace BistMode.ViewModels
     public class ChessBoardVM : ViewModelBase
     {
         private JObject _cfg;
-
         private bool _inInit = false;
         private bool _dirty  = false;
+
         public bool CanApply { get { return _dirty; } }
 
         private int _mMin = 2, _mMax = 40;
         private int _nMin = 2, _nMax = 40;
-
-        private const byte PATTERN_INDEX_CHESSBOARD = 0x0A;
 
         public int HRes { get { return GetValue<int>(); } set { SetValue(value); } }
         public int VRes { get { return GetValue<int>(); } set { SetValue(value); } }
@@ -44,23 +42,12 @@ namespace BistMode.ViewModels
             }
         }
 
-        // 衍生值 (純計算)
-        public int ToggleH { get { return (M > 0) ? (HRes / M) : 0; } }
-        public int ToggleV { get { return (N > 0) ? (VRes / N) : 0; } }
-        public int RemainderH { get { return HRes - (ToggleH * M); } }
-        public int RemainderV { get { return VRes - (ToggleV * N); } }
-        public int H_Plus1 { get { return (RemainderH == 0) ? 0 : 1; } }
-        public int V_Plus1 { get { return (RemainderV == 0) ? 0 : 1; } }
-
         public ICommand ApplyCommand { get; private set; }
 
         public ChessBoardVM()
         {
             ApplyCommand = CommandFactory.CreateCommand(Apply);
-            HRes = 1920; 
-            VRes = 720; 
-            M = 5; 
-            N = 7;
+            HRes = 1920; VRes = 720; M = 5; N = 7;
         }
 
         public void LoadFrom(JObject node)
@@ -116,17 +103,38 @@ namespace BistMode.ViewModels
             tv = Math.Clamp(tv, 0, 0x0FFF);
 
             byte h_low   = (byte)(th & 0xFF);
-            byte h_high  = (byte)((th >> 8) & 0xFF);
+            byte h_high  = (byte)((th >> 8) & 0x1F);  // 高位 5bit
             byte h_plus1 = (byte)((hRes - th * m) == 0 ? 0 : 1);
 
             byte v_low   = (byte)(tv & 0xFF);
-            byte v_high  = (byte)((tv >> 8) & 0xFF);
+            byte v_high  = (byte)((tv >> 8) & 0x0F);  // 高位 4bit
             byte v_plus1 = (byte)((vRes - tv * n) == 0 ? 0 : 1);
 
-            // 僅作為演算示例，無任何寫入
+            // 🧩 寫入對應暫存器
+            // 1. 水平 (003C, 003D, 0040)
+            RegMap.Write8("BIST_CHESSBOARD_H_TOGGLE_W_L", h_low);
+
+            byte cur003D = RegMap.Read8("BIST_CHESSBOARD_H_TOGGLE_W_H");
+            byte next003D = (byte)((cur003D & 0xE0) | (h_high & 0x1F));
+            if (next003D != cur003D)
+                RegMap.Write8("BIST_CHESSBOARD_H_TOGGLE_W_H", next003D);
+
+            RegMap.Write8("BIST_CHESSBOARD_H_PLUS1_BLKNUM", h_plus1);
+
+            // 2. 垂直 (003E, 003F, 0041)
+            RegMap.Write8("BIST_CHESSBOARD_V_TOGGLE_W_L", v_low);
+
+            byte cur003F = RegMap.Read8("BIST_CHESSBOARD_V_TOGGLE_W_H");
+            byte next003F = (byte)((cur003F & 0xF0) | (v_high & 0x0F));
+            if (next003F != cur003F)
+                RegMap.Write8("BIST_CHESSBOARD_V_TOGGLE_W_H", next003F);
+
+            RegMap.Write8("BIST_CHESSBOARD_V_PLUS1_BLKNUM", v_plus1);
+
+            // 🔧 Debug 紀錄
             System.Diagnostics.Debug.WriteLine(
-                $"[Chessboard] H={th} (0x{th:X}) L={h_low:X2} H={h_high:X2} P1={h_plus1}, " +
-                $"V={tv} (0x{tv:X}) L={v_low:X2} H={v_high:X2} P1={v_plus1}"
+                $"[Chessboard] H=0x{th:X4} ({hRes}/{m}), V=0x{tv:X4} ({vRes}/{n}), " +
+                $"H_P1={h_plus1}, V_P1={v_plus1}"
             );
 
             _dirty = false;
