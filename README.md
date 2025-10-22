@@ -1,29 +1,22 @@
-<GroupBox Header="Chessboard" Margin="0,10,0,0">
-  <StackPanel Margin="10">
+private void EnsureSelection()
+{
+    if (MOptions.Count > 0 && !MOptions.Contains(M))
+        M = MOptions[0]; // 保證 SelectedItem 有東西
+    if (NOptions.Count > 0 && !NOptions.Contains(N))
+        N = NOptions[0];
+}
 
-    <!-- Resolution -->
-    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-      <TextBlock Text="Resolution:" Width="100"/>
-      <TextBlock Text="{Binding ChessBoardVM.HRes}" Width="60"/>
-      <TextBlock Text="×" Margin="6,0"/>
-      <TextBlock Text="{Binding ChessBoardVM.VRes}" Width="60"/>
-    </StackPanel>
+private void BuildOptions()
+{
+    MOptions.Clear(); NOptions.Clear();
 
-    <!-- M / N (ComboBox) -->
-    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-      <TextBlock Text="M (H split):" Width="100"/>
-      <ComboBox Width="80"
-                ItemsSource="{Binding ChessBoardVM.MOptions}"
-                SelectedItem="{Binding ChessBoardVM.M, Mode=TwoWay}" />
+    int mStart = Math.Min(_mMin, _mMax), mEnd = Math.Max(_mMin, _mMax);
+    for (int v = mStart; v <= mEnd; v++) MOptions.Add(v);
 
-      <TextBlock Text="N (V split):" Width="100" Margin="24,0,0,0"/>
-      <ComboBox Width="80"
-                ItemsSource="{Binding ChessBoardVM.NOptions}"
-                SelectedItem="{Binding ChessBoardVM.N, Mode=TwoWay}" />
-    </StackPanel>
+    int nStart = Math.Min(_nMin, _nMax), nEnd = Math.Max(_nMin, _nMax);
+    for (int v = nStart; v <= nEnd; v++) NOptions.Add(v);
 
-    <Button Content="Set"
-            Width="120"
-            Command="{Binding ChessBoardVM.ApplyCommand}"/>
-  </StackPanel>
-</GroupBox>
+    // 退避，避免空清單
+    if (MOptions.Count == 0) for (int v = 2; v <= 40; v++) MOptions.Add(v);
+    if (NOptions.Count == 0) for (int v = 2; v <= 40; v++) NOptions.Add(v);
+}
