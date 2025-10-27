@@ -1,19 +1,29 @@
-// ====== 解析度邊界 ======
-private const int HResMin = 720;
-private const int HResMax = 6720;
-private const int VResMin = 136;
-private const int VResMax = 2560;
+<!-- 記得在頂部 xmlns 加上：xmlns:local="clr-namespace:YourAppNamespace" -->
 
-public int HRes
-{
-    get => GetValue<int>();
-    set => SetValue(Clamp(value, HResMin, HResMax));
-}
+<StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+  <TextBox Width="80">
+    <TextBox.Text>
+      <Binding Path="ChessBoardVM.HRes"
+               Mode="TwoWay"
+               UpdateSourceTrigger="PropertyChanged">
+        <Binding.ValidationRules>
+          <local:IntRangeRule Min="720" Max="6720"/>
+        </Binding.ValidationRules>
+      </Binding>
+    </TextBox.Text>
+  </TextBox>
 
-public int VRes
-{
-    get => GetValue<int>();
-    set => SetValue(Clamp(value, VResMin, VResMax));
-}
+  <TextBlock Text=" × " Margin="6,0"/>
 
-private static int Clamp(int v, int min, int max) => v < min ? min : (v > max ? max : v);
+  <TextBox Width="80">
+    <TextBox.Text>
+      <Binding Path="ChessBoardVM.VRes"
+               Mode="TwoWay"
+               UpdateSourceTrigger="PropertyChanged">
+        <Binding.ValidationRules>
+          <local:IntRangeRule Min="136" Max="2560"/>
+        </Binding.ValidationRules>
+      </Binding>
+    </TextBox.Text>
+  </TextBox>
+</StackPanel>
