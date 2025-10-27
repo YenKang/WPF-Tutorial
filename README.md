@@ -1,40 +1,19 @@
-if (IsGrayLevelVisible && p?.GrayLevelControl != null)
+// ====== 解析度邊界 ======
+private const int HResMin = 720;
+private const int HResMax = 6720;
+private const int VResMin = 136;
+private const int VResMax = 2560;
+
+public int HRes
 {
-    string name = p.Name?.ToUpperInvariant() ?? "";
-
-    switch (true)
-    {
-        case true when name.Contains("PT"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Pattern; break;
-
-        case true when name.Contains("FLK"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Flicker; break;
-
-        case true when name.Contains("GRAY"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Gray; break;
-
-        case true when name.Contains("CROSS"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Crosstalk; break;
-
-        case true when name.Contains("PIXEL"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Pixel; break;
-
-        case true when name.Contains("LINE"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Line; break;
-
-        case true when name.Contains("CURSOR_BG"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.CursorBg; break;
-
-        case true when name.Contains("CURSOR"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Cursor; break;
-
-        case true when name.Contains("CHESS"):
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Chessboard; break;
-
-        default:
-            GrayLevelVM.CurrentRegSet = GrayLevelType.Pattern; break;
-    }
-
-    GrayLevelVM.LoadFrom(p.GrayLevelControl);
-    GrayLevelVM.RefreshFromRegister();
+    get => GetValue<int>();
+    set => SetValue(Clamp(value, HResMin, HResMax));
 }
+
+public int VRes
+{
+    get => GetValue<int>();
+    set => SetValue(Clamp(value, VResMin, VResMax));
+}
+
+private static int Clamp(int v, int min, int max) => v < min ? min : (v > max ? max : v);
