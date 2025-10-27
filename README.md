@@ -1,16 +1,16 @@
-private int Read10Bit(string lowReg, string highReg, byte mask, int shift)
+if (IsGrayLevelVisible && p?.GrayLevelControl != null)
 {
-    int low  = RegMap.Read8(lowReg) & 0xFF;
-    int high = RegMap.Read8(highReg);
-    int hi2  = (high & mask) >> shift;         // 取出高2bit（位於 high 的 mask 區，右移到 LSB）
-    return ((hi2 & 0x03) << 8) | low;          // 合成 10-bit
-}
+    // 依你的圖名/索引決定類型（下面僅示例，請換成你實際判斷）
+    if      (p.Name.Contains("PT"))        GrayLevelVM.CurrentRegSet = GrayLevelType.Pattern;
+    else if (p.Name.Contains("FLK"))       GrayLevelVM.CurrentRegSet = GrayLevelType.Flicker;
+    else if (p.Name.Contains("GRAY"))      GrayLevelVM.CurrentRegSet = GrayLevelType.Gray;
+    else if (p.Name.Contains("CROSS"))     GrayLevelVM.CurrentRegSet = GrayLevelType.Crosstalk;
+    else if (p.Name.Contains("PIXEL"))     GrayLevelVM.CurrentRegSet = GrayLevelType.Pixel;
+    else if (p.Name.Contains("LINE"))      GrayLevelVM.CurrentRegSet = GrayLevelType.Line;
+    else if (p.Name.Contains("CURSOR_BG")) GrayLevelVM.CurrentRegSet = GrayLevelType.CursorBg;
+    else if (p.Name.Contains("CURSOR"))    GrayLevelVM.CurrentRegSet = GrayLevelType.Cursor;
+    else if (p.Name.Contains("CHESS"))     GrayLevelVM.CurrentRegSet = GrayLevelType.Chessboard;
 
-private void ApplyGrayDigits(int gray10)
-{
-    if (gray10 < 0) gray10 = 0;
-    if (gray10 > 0x3FF) gray10 = 0x3FF;
-    D2 = (gray10 >> 8) & 0x03;   // [9:8]
-    D1 = (gray10 >> 4) & 0x0F;   // [7:4]
-    D0 =  gray10        & 0x0F;  // [3:0]
+    GrayLevelVM.LoadFrom(p.GrayLevelControl); // 照舊：JSON 生 options
+    GrayLevelVM.RefreshFromRegister();        // 新增：用目前暫存器覆寫 Selected 值
 }
