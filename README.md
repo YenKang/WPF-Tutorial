@@ -1,16 +1,23 @@
-using System.Globalization;
-using System.Windows.Controls;
+public int HRes { get => GetValue<int>(); set => SetValue(value); }
+public int VRes { get => GetValue<int>(); set => SetValue(value); }
 
-public class IntRangeRule : ValidationRule
+private const int HResMin = 720, HResMax = 6720;
+private const int VResMin = 136, VResMax = 2560;
+
+private static int Clamp(int v, int min, int max) => v < min ? min : (v > max ? max : v);
+
+private void ApplyToRegister()
 {
-    public int Min { get; set; } = int.MinValue;
-    public int Max { get; set; } = int.MaxValue;
+    // 這裡才做夾範圍
+    HRes = Clamp(HRes, HResMin, HResMax);
+    VRes = Clamp(VRes, VResMin, VResMax);
 
-    public override ValidationResult Validate(object value, CultureInfo cultureInfo)
-    {
-        if (value == null) return new ValidationResult(false, "Required");
-        if (!int.TryParse(value.ToString(), out int v)) return new ValidationResult(false, "Number");
-        if (v < Min || v > Max) return new ValidationResult(false, $"{Min}..{Max}");
-        return ValidationResult.ValidResult;
-    }
+    // 之後照你原本的 Apply() 流程寫暫存器……
 }
+
+======
+
+<TextBox Width="80"
+         Text="{Binding ChessBoardVM.HRes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+<TextBox Width="80"
+         Text="{Binding ChessBoardVM.VRes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
