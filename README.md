@@ -1,16 +1,40 @@
 if (IsGrayLevelVisible && p?.GrayLevelControl != null)
 {
-    // 依你的圖名/索引決定類型（下面僅示例，請換成你實際判斷）
-    if      (p.Name.Contains("PT"))        GrayLevelVM.CurrentRegSet = GrayLevelType.Pattern;
-    else if (p.Name.Contains("FLK"))       GrayLevelVM.CurrentRegSet = GrayLevelType.Flicker;
-    else if (p.Name.Contains("GRAY"))      GrayLevelVM.CurrentRegSet = GrayLevelType.Gray;
-    else if (p.Name.Contains("CROSS"))     GrayLevelVM.CurrentRegSet = GrayLevelType.Crosstalk;
-    else if (p.Name.Contains("PIXEL"))     GrayLevelVM.CurrentRegSet = GrayLevelType.Pixel;
-    else if (p.Name.Contains("LINE"))      GrayLevelVM.CurrentRegSet = GrayLevelType.Line;
-    else if (p.Name.Contains("CURSOR_BG")) GrayLevelVM.CurrentRegSet = GrayLevelType.CursorBg;
-    else if (p.Name.Contains("CURSOR"))    GrayLevelVM.CurrentRegSet = GrayLevelType.Cursor;
-    else if (p.Name.Contains("CHESS"))     GrayLevelVM.CurrentRegSet = GrayLevelType.Chessboard;
+    string name = p.Name?.ToUpperInvariant() ?? "";
 
-    GrayLevelVM.LoadFrom(p.GrayLevelControl); // 照舊：JSON 生 options
-    GrayLevelVM.RefreshFromRegister();        // 新增：用目前暫存器覆寫 Selected 值
+    switch (true)
+    {
+        case true when name.Contains("PT"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Pattern; break;
+
+        case true when name.Contains("FLK"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Flicker; break;
+
+        case true when name.Contains("GRAY"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Gray; break;
+
+        case true when name.Contains("CROSS"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Crosstalk; break;
+
+        case true when name.Contains("PIXEL"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Pixel; break;
+
+        case true when name.Contains("LINE"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Line; break;
+
+        case true when name.Contains("CURSOR_BG"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.CursorBg; break;
+
+        case true when name.Contains("CURSOR"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Cursor; break;
+
+        case true when name.Contains("CHESS"):
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Chessboard; break;
+
+        default:
+            GrayLevelVM.CurrentRegSet = GrayLevelType.Pattern; break;
+    }
+
+    GrayLevelVM.LoadFrom(p.GrayLevelControl);
+    GrayLevelVM.RefreshFromRegister();
 }
