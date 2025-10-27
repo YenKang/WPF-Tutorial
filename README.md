@@ -33,3 +33,4 @@ public void RefreshFromRegister()
         System.Diagnostics.Debug.WriteLine($"[GrayLevel] RefreshFromRegister failed: {ex.Message}");
     }
 }
+
