@@ -1,29 +1,16 @@
-<!-- 記得在頂部 xmlns 加上：xmlns:local="clr-namespace:YourAppNamespace" -->
+using System.Globalization;
+using System.Windows.Controls;
 
-<StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-  <TextBox Width="80">
-    <TextBox.Text>
-      <Binding Path="ChessBoardVM.HRes"
-               Mode="TwoWay"
-               UpdateSourceTrigger="PropertyChanged">
-        <Binding.ValidationRules>
-          <local:IntRangeRule Min="720" Max="6720"/>
-        </Binding.ValidationRules>
-      </Binding>
-    </TextBox.Text>
-  </TextBox>
+public class IntRangeRule : ValidationRule
+{
+    public int Min { get; set; } = int.MinValue;
+    public int Max { get; set; } = int.MaxValue;
 
-  <TextBlock Text=" × " Margin="6,0"/>
-
-  <TextBox Width="80">
-    <TextBox.Text>
-      <Binding Path="ChessBoardVM.VRes"
-               Mode="TwoWay"
-               UpdateSourceTrigger="PropertyChanged">
-        <Binding.ValidationRules>
-          <local:IntRangeRule Min="136" Max="2560"/>
-        </Binding.ValidationRules>
-      </Binding>
-    </TextBox.Text>
-  </TextBox>
-</StackPanel>
+    public override ValidationResult Validate(object value, CultureInfo cultureInfo)
+    {
+        if (value == null) return new ValidationResult(false, "Required");
+        if (!int.TryParse(value.ToString(), out int v)) return new ValidationResult(false, "Number");
+        if (v < Min || v > Max) return new ValidationResult(false, $"{Min}..{Max}");
+        return ValidationResult.ValidResult;
+    }
+}
