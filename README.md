@@ -26,3 +26,4 @@ private void WriteToRegisters()
 
     RegMap.Write8("BIST_CHESSBOARD_V_PLUS1_BLKNUM", (byte)(vPlus1 & 0x01));
 }
+
