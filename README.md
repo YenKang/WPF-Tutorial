@@ -1,49 +1,20 @@
-private JObject _cfg;
-private JObject _jChessH;
-private JObject _jChessV;
-
-public void LoadFrom(JObject node)
+public void RefreshFromRegister()
 {
     try
     {
-        bool cfgChanged = !ReferenceEquals(_cfg, node);
-        _cfg = node;
+        ReadToggleFromJson(_jChessH, out int th, out int hPlus1);
+        ReadToggleFromJson(_jChessV, out int tv, out int vPlus1);
 
-        if (_cfg?["fields"] is not JArray fields)
-            return;
+        if (M > 0)
+            HRes = Clamp(th * M + (hPlus1 != 0 ? 1 : 0), HResMin, HResMax);
+        if (N > 0)
+            VRes = Clamp(tv * N + (vPlus1 != 0 ? 1 : 0), VResMin, VResMax);
 
-        // === 1️⃣ 若 JSON 結構改變才重建 options/default ===
-        if (cfgChanged)
-        {
-            foreach (JObject f in fields.Cast<JObject>())
-            {
-                string key = (string)f["key"];
-                int def = (int?)f["default"] ?? 0;
-                int min = (int?)f["min"] ?? 0;
-                int max = (int?)f["max"] ?? 0;
-
-                switch (key)
-                {
-                    case "H_RES": HRes = def; break;
-                    case "V_RES": VRes = def; break;
-                    case "M": _mMin = min; _mMax = max; M = def; break;
-                    case "N": _nMin = min; _nMax = max; N = def; break;
-                }
-            }
-
-            // 重新建立 M / N ComboBox 選項
-            BuildOptions();
-
-            // 快取寄存器組節點，後續回讀會用
-            _jChessH = _cfg?["chessH"] as JObject;
-            _jChessV = _cfg?["chessV"] as JObject;
-        }
-
-        // === 2️⃣ 每次切圖都回讀暫存器，覆蓋顯示值 ===
-        RefreshFromRegister();
+        System.Diagnostics.Debug.WriteLine(
+            $"[Chessboard] RefreshFromRegister OK → th={th}, tv={tv}, HRes={HRes}, VRes={VRes}");
     }
     catch (Exception ex)
     {
-        System.Diagnostics.Debug.WriteLine("[ChessBoardVM] LoadFrom failed: " + ex.Message);
+        System.Diagnostics.Debug.WriteLine("[Chessboard] RefreshFromRegister failed: " + ex.Message);
     }
 }
