@@ -1,58 +1,148 @@
-// 1) 加上常數
-private const int MMin = 2, MMax = 40, MDef = 5;
-private const int NMin = 2, NMax = 40, NDef = 7;
+using System;
+using System.Globalization;
+using System.Linq;
+using System.Windows.Input;
+using Newtonsoft.Json.Linq;
+using Utility.MVVM.Command;
 
-// 2) 調整屬性：夾範圍
-public int M { get => GetValue<int>(); set => SetValue(Clamp(value, MMin, MMax)); }
-public int N { get => GetValue<int>(); set => SetValue(Clamp(value, NMin, NMax)); }
-
-// 3) 重建選項時，確保 SelectedItem 仍合法
-private void BuildOptions()
+namespace BistMode.ViewModels
 {
-    MOptions.Clear();
-    NOptions.Clear();
-    for (int i = MMin; i <= MMax; i++) MOptions.Add(i);
-    for (int i = NMin; i <= NMax; i++) NOptions.Add(i);
-
-    CoerceMNSelection();  // ← 新增
-}
-
-private void CoerceMNSelection()
-{
-    if (M < MMin || M > MMax) M = MDef;
-    if (N < NMin || N > NMax) N = NDef;
-
-    // 再次保險：清單中真的有這個值
-    if (!MOptions.Contains(M) && MOptions.Count > 0) M = MOptions[0];
-    if (!NOptions.Contains(N) && NOptions.Count > 0) N = NOptions[0];
-}
-
-// 4) LoadFrom 結尾再保險一次
-public void LoadFrom(JObject node)
-{
-    _cfg = node;
-
-    // (A) 先設 default（原本的）
-    if (node?["fields"] is JArray fields)
+    public class GrayReverseVM : ViewModelBase
     {
-        foreach (JObject f in fields)
+        private JObject _cfg;
+
+        // --- 綁定屬性 ---
+        public bool Enable
         {
-            string key = (string)f["key"];
-            int def = (int?)f["default"] ?? 0;
-            switch (key)
+            get => GetValue<bool>();
+            set => SetValue(value);
+        }
+
+        public string Axis
+        {
+            get => GetValue<string>();
+            set
             {
-                case "H_RES": HRes = def; break;
-                case "V_RES": VRes = def; break;
-                case "M":     M    = def; break;   // 若沒給，下面會補
-                case "N":     N    = def; break;
+                SetValue(value);
+                Title = (Axis == "V")
+                    ? "Vertical Gray Reverse Enable"
+                    : "Horizontal Gray Reverse Enable";
             }
         }
+
+        public string Title
+        {
+            get => GetValue<string>();
+            set => SetValue(value);
+        }
+
+        public ICommand ApplyCommand { get; }
+
+        public GrayReverseVM()
+        {
+            ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
+            Axis = "H";  // default
+        }
+
+        // === 讀取 JSON 設定 ===
+        public void LoadFrom(object jsonCfg)
+        {
+            _cfg = jsonCfg as JObject;
+            if (_cfg == null) return;
+
+            // Axis
+            var axisTok = _cfg["axis"];
+            var axis = axisTok != null
+                ? axisTok.ToString().Trim().ToUpperInvariant()
+                : "H";
+            Axis = (axis == "V") ? "V" : "H";
+
+            // Default 值
+            int def = (int?)_cfg["default"] ?? 0;
+            Enable = (def != 0);
+
+            // 初始化時回讀暫存器，覆蓋實際值
+            TryRefreshFromRegister();
+        }
+
+        // === 寫入暫存器 ===
+        private void ExecuteWrite()
+        {
+            try
+            {
+                // 若 JSON 有 writes 直接用 JSON 的規則
+                if (_cfg?["writes"] is JArray writes && writes.Count > 0)
+                {
+                    foreach (JObject w in writes.Cast<JObject>())
+                    {
+                        string mode = (string)w["mode"] ?? "rmw";
+                        string target = (string)w["target"];
+                        if (string.IsNullOrEmpty(target)) continue;
+
+                        int mask = ParseInt((string)w["mask"], 0xFF);
+                        int shift = (int?)w["shift"] ?? 0;
+
+                        byte cur = RegMap.Read8(target);
+                        byte newVal = (byte)((Enable ? 1 : 0) << shift);
+                        byte next = (byte)((cur & ~mask) | (newVal & mask));
+                        RegMap.Write8(target, next);
+                    }
+                }
+                else
+                {
+                    // 沒有 writes 就直接寫預設寄存器
+                    string regName = (Axis == "V")
+                        ? "BIST_GrayColor_VH_Reverse"
+                        : "BIST_GrayColor_VH_Reverse";
+
+                    int bit = (Axis == "V") ? 5 : 4; // 依據 datasheet 決定 bit 位置
+                    byte cur = RegMap.Read8(regName);
+                    byte newVal = (byte)(
+                        Enable ? (cur | (1 << bit)) : (cur & ~(1 << bit))
+                    );
+                    RegMap.Write8(regName, newVal);
+                }
+
+                // 寫入後立刻回讀，讓 UI 同步
+                TryRefreshFromRegister();
+                System.Diagnostics.Debug.WriteLine($"[GrayReverse] Set OK: {Axis}={Enable}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[GrayReverse] Write failed: " + ex.Message);
+            }
+        }
+
+        // === 回讀暫存器，更新 CheckBox ===
+        public void RefreshFromRegister()
+        {
+            string regName = (Axis == "V")
+                ? "BIST_GrayColor_VH_Reverse"
+                : "BIST_GrayColor_VH_Reverse";
+            int bit = (Axis == "V") ? 5 : 4;
+
+            int cur = RegMap.Read8(regName);
+            Enable = ((cur >> bit) & 0x01) != 0;
+
+            System.Diagnostics.Debug.WriteLine($"[GrayReverse] RefreshFromRegister: {Axis}={Enable}");
+        }
+
+        private void TryRefreshFromRegister()
+        {
+            try { RefreshFromRegister(); }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[GrayReverse] Skip refresh: " + ex.Message);
+            }
+        }
+
+        // === 工具函式 ===
+        private static int ParseInt(string s, int def = 0)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return def;
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                return int.TryParse(s.Substring(2), NumberStyles.HexNumber, null, out int v) ? v : def;
+            return int.TryParse(s, out int v2) ? v2 : def;
+        }
     }
-
-    // (B) 建清單後，把 M/N 壓回合法並確保選到
-    BuildOptions();
-    CoerceMNSelection();
-
-    // (C) 嘗試回讀暫存器（不會改 M/N，只改 HRes/VRes）
-    TryRefreshFromRegister();
 }
