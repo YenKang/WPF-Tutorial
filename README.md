@@ -1,5 +1,6 @@
-using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.ObjectModel;
+using Newtonsoft.Json.Linq;
 using Utility.MVVM.Command;
 
 namespace BistMode.ViewModels
@@ -7,30 +8,32 @@ namespace BistMode.ViewModels
     public class BWLoopVM : ViewModelBase
     {
         private JObject _cfg;
-        private bool _preferHw = false; // ✅ 硬體優先旗標
 
-        // === JSON 參數 ===
+        // 一旦 Set 成功 -> 後續以硬體真值覆蓋 UI
+        private bool _preferHw = false;
+
+        // ===== JSON: 整值範圍與預設 =====
         private int _min = 0x000;
-        private int _max = 0x3FF;
-        private int _defaultValue = 0x01E;
+        private int _max = 0x3FF;          // 10-bit
+        private int _defaultValue = 0x01E; // 先給既有預設, 會被 JSON 覆蓋
 
-        // === 暫存器目標 ===
-        private string _lowAddr = "BIST_FCNT2_LO";   // 0x0043
+        // ===== 寫入目標（可由 JSON targets 覆蓋）=====
+        private string _lowAddr  = "BIST_FCNT2_LO";  // 0x0043
         private string _highAddr = "BIST_FCNT2_HI";  // 0x0044
-        private int _mask = 0x0C;                    // 高位 mask [3:2]
-        private int _shift = 2;                      // 起始 bit2
+        private byte   _mask     = 0x0C;             // 高位 2bits 的 mask (bit[3:2])
+        private int    _shift    = 2;                // 從 bit2 起
 
-        // === ComboBox 選項 ===
+        // ===== UI 選項 =====
         public ObservableCollection<int> D2Options { get; } = new ObservableCollection<int>(new[] { 0, 1, 2, 3 });
         public ObservableCollection<int> D1Options { get; } = new ObservableCollection<int>(Generate(0, 15));
         public ObservableCollection<int> D0Options { get; } = new ObservableCollection<int>(Generate(0, 15));
 
-        // === 三個 nibble ===
-        public int FCNT2_D2 { get => GetValue<int>(); set => SetValue(ClampNibble(value)); }
+        // ===== 三個 nibble（D2 實際只用 2bits，UI 嚴格限制 0..3）=====
+        public int FCNT2_D2 { get => GetValue<int>(); set => SetValue(value < 0 ? 0 : (value > 3 ? 3 : value)); }
         public int FCNT2_D1 { get => GetValue<int>(); set => SetValue(ClampNibble(value)); }
         public int FCNT2_D0 { get => GetValue<int>(); set => SetValue(ClampNibble(value)); }
 
-        // === 合併為 10-bit ===
+        // ===== 合併為 10-bit =====
         public int FCNT2_Value
         {
             get
@@ -47,115 +50,151 @@ namespace BistMode.ViewModels
         public BWLoopVM()
         {
             ApplyCommand = CommandFactory.CreateCommand(Apply);
-            BuildNibbleOptions();
+            // 預先塞選項（保留你原本風格）
+            if (D1Options.Count == 0 || D0Options.Count == 0)
+            {
+                D1Options.Clear(); D0Options.Clear();
+                for (int i = 0; i <= 15; i++) { D1Options.Add(i); D0Options.Add(i); }
+            }
+            // 初始 UI 值（避免空白）
             SetFromValue(_defaultValue);
         }
 
-        // === 初始化：讀取 JSON 並建構 UI ===
+        // ===== 從 JSON 載入 =====
         public void LoadFrom(object jsonCfg)
         {
             _cfg = jsonCfg as JObject;
             if (_cfg == null) return;
 
-            if (_cfg["default"] != null)
-                _defaultValue = TryParseInt(_cfg["default"].ToString(), _defaultValue);
+            // 讀 fcnt2 節點（default/min/max）
+            if (_cfg["fcnt2"] is JObject fcnt2)
+            {
+                _defaultValue = TryParseInt((string)fcnt2["default"], _defaultValue);
+                _min          = TryParseInt((string)fcnt2["min"],      _min);
+                _max          = TryParseInt((string)fcnt2["max"],      _max);
+            }
 
-            SetFromValue(_defaultValue);
+            // 讀 targets（low/high/mask/shift）
+            if (_cfg["targets"] is JObject tgt)
+            {
+                _lowAddr  = (string)tgt["low"]  ?? _lowAddr;
+                _highAddr = (string)tgt["high"] ?? _highAddr;
+                _mask     = ParseHexByte((string)tgt["mask"], _mask);
+                _shift    = (int?)tgt["shift"] ?? _shift;
+            }
 
-            // ✅ 若已執行過 Set，則以硬體真值覆蓋 UI
+            // 先用 JSON default 展開到 D2/D1/D0
+            SetFromValue(Clamp(_defaultValue, _min, _max));
+
+            // 若曾 Apply 過 -> 以硬體真值覆蓋
             if (_preferHw) TryRefreshFromRegister();
+
+            System.Diagnostics.Debug.WriteLine(
+                $"[BWLoop] LoadFrom: def=0x{_defaultValue:X3}, D2={FCNT2_D2},D1={FCNT2_D1},D0={FCNT2_D0}, preferHw={_preferHw}");
         }
 
-        // === 寫入 ===
+        // ===== Set（永遠可寫；寫完切硬體優先＋回讀）=====
         private void Apply()
         {
+            bool ok = false;
+
             try
             {
                 int value = FCNT2_Value;
 
-                // 寫低位
+                // 寫低 8 位
                 byte low = (byte)(value & 0xFF);
                 RegMap.Write8(_lowAddr, low);
+                ok = true;
 
-                // 寫高位 (2bits)
-                byte hiBits = (byte)((value >> 8) & 0x03);
-                byte cur = RegMap.Read8(_highAddr);
-                byte next = (byte)((cur & ~_mask) | ((hiBits << _shift) & _mask));
+                // 寫高 2 位（RMW）
+                byte hiBits  = (byte)((value >> 8) & 0x03);
+                byte curHigh = RegMap.Read8(_highAddr);
+                byte next    = (byte)((curHigh & ~_mask) | (((hiBits << _shift) & _mask)));
                 RegMap.Write8(_highAddr, next);
+                ok = true;
 
-                System.Diagnostics.Debug.WriteLine($"[BWLoop] Apply success: 0x{value:X3}");
-                _preferHw = true;              // ✅ 寫完後，改為硬體優先模式
-                TryRefreshFromRegister();      // ✅ 寫完立刻回讀同步
+                System.Diagnostics.Debug.WriteLine($"[BWLoop] Apply OK -> 0x{value:X3}");
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("[BWLoop] Apply failed: " + ex.Message);
             }
+
+            if (ok)
+            {
+                _preferHw = true;     // 之後以硬體真值為主
+                TryRefreshFromRegister(); // 寫完立刻回讀同步 UI
+            }
         }
 
-        // === 回讀暫存器 ===
+        // ===== 回讀暫存器，拆回 D2/D1/D0 =====
         public void RefreshFromRegister()
         {
-            try
-            {
-                int low = RegMap.Read8(_lowAddr) & 0xFF;
-                int high = RegMap.Read8(_highAddr) & 0xFF;
-                int hi2 = (high & _mask) >> _shift;
-                int v10 = ((hi2 << 8) | low) & 0x3FF;
+            int low  = RegMap.Read8(_lowAddr)  & 0xFF;
+            int high = RegMap.Read8(_highAddr) & 0xFF;
 
-                FCNT2_D2 = (v10 >> 8) & 0x03;
-                FCNT2_D1 = (v10 >> 4) & 0x0F;
-                FCNT2_D0 = (v10 >> 0) & 0x0F;
+            int hi2  = (high & _mask) >> _shift;      // 取出高位 2bits
+            int v10  = ((hi2 & 0x03) << 8) | low;     // 合成 10-bit
 
-                System.Diagnostics.Debug.WriteLine($"[BWLoop] Refresh OK: {v10:X3} (D2={FCNT2_D2}, D1={FCNT2_D1}, D0={FCNT2_D0})");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("[BWLoop] Refresh failed: " + ex.Message);
-            }
+            // 展開回 UI（D2 嚴格 0..3）
+            FCNT2_D2 = ((v10 >> 8) & 0x0F) > 3 ? 3 : ((v10 >> 8) & 0x0F);
+            FCNT2_D1 = (v10 >> 4) & 0x0F;
+            FCNT2_D0 =  v10       & 0x0F;
+
+            System.Diagnostics.Debug.WriteLine($"[BWLoop] Refresh OK: low=0x{low:X2}, high=0x{high:X2} -> 0x{v10:X3}");
         }
 
         private bool TryRefreshFromRegister()
         {
             try { RefreshFromRegister(); return true; }
-            catch { return false; }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[BWLoop] Refresh skipped: " + ex.Message);
+                return false;
+            }
         }
 
-        // === 小工具 ===
+        // ===== Helpers =====
+        private static int Clamp(int v, int min, int max) => (v < min) ? min : (v > max ? max : v);
         private static int ClampNibble(int v) => v < 0 ? 0 : (v > 15 ? 15 : v);
 
-        private static void SetFromValue(int value)
+        private void SetFromValue(int value)
         {
-            value = value & 0x3FF;
-            int d2 = (value >> 8) & 0x03;
+            value &= 0x3FF; // 只保留 10-bit
+
+            int d2 = (value >> 8) & 0x0F; // 與你舊版一致（但 UI 會再限制 0..3）
             int d1 = (value >> 4) & 0x0F;
             int d0 = (value >> 0) & 0x0F;
 
-            // 通常在 ViewModelBase 裡有 SetValue 機制
+            FCNT2_D2 = d2 > 3 ? 3 : d2;   // 嚴格 2bits
+            FCNT2_D1 = d1;
+            FCNT2_D0 = d0;
         }
 
         private static int TryParseInt(string s, int fallback)
         {
             if (string.IsNullOrWhiteSpace(s)) return fallback;
-            if (s.StartsWith("0x"))
-                return int.TryParse(s.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out int hex) ? hex : fallback;
+            s = s.Trim();
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                return int.TryParse(s.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out int vHex) ? vHex : fallback;
             return int.TryParse(s, out int v) ? v : fallback;
         }
 
-        private static int[] Generate(int start, int end)
+        private static byte ParseHexByte(string hexOrNull, byte fallback)
         {
-            var arr = new int[end - start + 1];
-            for (int i = 0; i < arr.Length; i++) arr[i] = start + i;
-            return arr;
+            if (string.IsNullOrWhiteSpace(hexOrNull)) return fallback;
+            string s = hexOrNull.Trim();
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
+            return byte.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out byte b) ? b : fallback;
         }
 
-        private void BuildNibbleOptions()
+        private static int[] Generate(int a, int b)
         {
-            D2Options.Clear();
-            for (int i = 0; i <= 3; i++) D2Options.Add(i);
-            D1Options.Clear();
-            D0Options.Clear();
-            for (int i = 0; i <= 15; i++) { D1Options.Add(i); D0Options.Add(i); }
+            int n = b - a + 1;
+            var arr = new int[n];
+            for (int i = 0; i < n; i++) arr[i] = a + i;
+            return arr;
         }
     }
 }
