@@ -7,15 +7,18 @@ namespace BistMode.ViewModels
 {
     public sealed class AutoRunVM : ViewModelBase
     {
-        private const int MaxOrders = 22;
-        private const int TotalMask = 0x1F;
-        private const int OrdMask   = 0x3F;
+        private const int MaxOrders = 22;    // ORD0..ORD21
+        private const int TotalMask = 0x1F;  // BIST_PT_TOTAL[4:0] = (Total-1)
+        private const int OrdMask   = 0x3F;  // ORD 低6bit = pattern index
 
         private JObject _cfg;
         private bool _preferHw;
         private bool _isHydrating;
 
-        // === UI 綁定 ===
+        // JSON 宣告的 min/max（經過夾限 1..22 後）；用來建表與擴充
+        private int _totalMin = 1;
+        private int _totalMax = MaxOrders;
+
         public ObservableCollection<int> TotalOptions { get; } = new ObservableCollection<int>();
         public ObservableCollection<PatternOption> PatternOptions { get; } = new ObservableCollection<PatternOption>();
         public ObservableCollection<OrderSlot> Orders { get; } = new ObservableCollection<OrderSlot>();
@@ -31,6 +34,7 @@ namespace BistMode.ViewModels
             get { return GetValue<int>(); }
             set
             {
+                // 這裡不夾限，夾限在呼叫端（LoadFrom/Refresh）與 Ensure* 方法中做
                 if (SetValue(value))
                     ResizeOrders(value);
             }
@@ -38,46 +42,90 @@ namespace BistMode.ViewModels
 
         public ICommand ApplyCommand { get; }
 
-        // === 建構子 ===
         public AutoRunVM()
         {
             ApplyCommand = CommandFactory.CreateCommand(Apply);
         }
 
-        // === 載入 JSON ===
-        public void LoadFrom(JObject autoRunControl, bool preferHw = false)
+        // ========== 核心修正點：TotalOptions 與 Total 的安全流程 ==========
+        private void BuildTotalOptions(int min, int max)
         {
-            if (autoRunControl == null)
-                return;
-
-            _cfg = autoRunControl;
-            _preferHw = _preferHw || preferHw;
-
-            // 1️⃣ Title
-            Title = (string)autoRunControl["title"] ?? "Auto Run";
-
-            // 2️⃣ Pattern options
-            EnsurePatternOptionsFromJson();
-
-            // 3️⃣ Total ComboBox
-            var totalObj = autoRunControl["total"] as JObject;
-            int min = Clamp(totalObj?["min"]?.Value<int>() ?? 1, 1, MaxOrders);
-            int max = Clamp(totalObj?["max"]?.Value<int>() ?? MaxOrders, 1, MaxOrders);
-            int def = Clamp(totalObj?["default"]?.Value<int>() ?? MaxOrders, min, max);
+            // 1..22 夾限，並保存到欄位（供後續擴充）
+            _totalMin = Clamp(min, 1, MaxOrders);
+            _totalMax = Clamp(max, 1, MaxOrders);
+            if (_totalMin > _totalMax) { var t = _totalMin; _totalMin = _totalMax; _totalMax = t; }
 
             TotalOptions.Clear();
-            for (int i = min; i <= max; i++)
-                TotalOptions.Add(i);
+            for (int v = _totalMin; v <= _totalMax; v++)
+                TotalOptions.Add(v);
+        }
+
+        // 確保清單「吃得下」指定的 total；硬體回讀可能 > JSON max，就擴到硬體值（不超過 22）
+        private void EnsureTotalOptionsCovers(int required)
+        {
+            int needMax = Clamp(required, 1, MaxOrders);
+
+            if (TotalOptions.Count == 0)
+            {
+                BuildTotalOptions(1, needMax);
+                return;
+            }
+
+            int curMin = TotalOptions[0];
+            int curMax = TotalOptions[TotalOptions.Count - 1];
+
+            // 擴右邊
+            if (needMax > curMax)
+            {
+                for (int v = curMax + 1; v <= needMax; v++)
+                    TotalOptions.Add(v);
+                _totalMax = needMax;
+            }
+
+            // 理論上不會需要擴左邊；保險維持從 1 起算
+            if (curMin > 1)
+            {
+                TotalOptions.Clear();
+                for (int v = 1; v <= _totalMax; v++)
+                    TotalOptions.Add(v);
+                _totalMin = 1;
+            }
+        }
+
+        // ========== Public APIs ==========
+        public void LoadFrom(JObject autoRunControl, bool preferHw = false)
+        {
+            if (autoRunControl == null) return;
+
+            _cfg = autoRunControl;
+            _preferHw = _preferHw || preferHw;   // 一旦 true 就保留
+
+            // 1) Title
+            Title = (string)autoRunControl["title"] ?? "Auto Run";
+
+            // 2) PatternOptions 先建好（避免 Combo 失去 ItemsSource）
+            EnsurePatternOptionsFromJson();
+
+            // 3) TotalOptions：先建好清單，再決定 Total 來源
+            var totalObj = autoRunControl["total"] as JObject;
+            int jsonMin = (totalObj?["min"] != null) ? totalObj["min"].Value<int>() : 1;
+            int jsonMax = (totalObj?["max"] != null) ? totalObj["max"].Value<int>() : MaxOrders;
+            int jsonDef = (totalObj?["default"] != null) ? totalObj["default"].Value<int>() : MaxOrders;
+
+            BuildTotalOptions(jsonMin, jsonMax); // 先建表（重點）
 
             _isHydrating = true;
             try
             {
                 if (_preferHw)
                 {
+                    // 偏好硬體：Refresh 會先擴清單再設 Total，避免紅框
                     RefreshFromHardware();
                 }
                 else
                 {
+                    // JSON 模式：先把 default 夾回清單範圍，再設 Total
+                    int def = Clamp(jsonDef, _totalMin, _totalMax);
                     Total = def;
                     HydrateOrdersFromJsonDefaultsForRange(0, def);
                 }
@@ -87,21 +135,22 @@ namespace BistMode.ViewModels
                 _isHydrating = false;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[AutoRun] LoadFrom done. preferHw={_preferHw}");
+            System.Diagnostics.Debug.WriteLine($"[AutoRun] LoadFrom done. preferHw={_preferHw}, TotalOptions={TotalOptions.Count}, Total={Total}");
         }
 
-        // === 寫入 ===
         public void Apply()
         {
             if (Total <= 0) return;
 
-            // 寫 TOTAL: 0=1張
-            byte totalRaw = (byte)((Total - 1) & TotalMask);
-            RegMap.Rmw8("BIST_PT_TOTAL", TotalMask, totalRaw);
-            System.Diagnostics.Debug.WriteLine($"[AutoRun] Write TOTAL = {totalRaw:X2}");
+            int count = Clamp(Total, 1, MaxOrders);
 
-            // 寫 ORD0..ORDn
-            for (int i = 0; i < Total && i < Orders.Count; i++)
+            // TOTAL 寫入：(Total-1)
+            byte totalRaw = (byte)((count - 1) & TotalMask);
+            RegMap.Write8("BIST_PT_TOTAL", totalRaw);
+            System.Diagnostics.Debug.WriteLine($"[AutoRun] Write TOTAL raw=0x{totalRaw:X2} (UI={count})");
+
+            // ORD 寫入
+            for (int i = 0; i < count && i < Orders.Count; i++)
             {
                 string reg = "BIST_PT_ORD" + i;
                 byte val = (byte)(Orders[i].SelectedIndex & OrdMask);
@@ -113,42 +162,44 @@ namespace BistMode.ViewModels
             RefreshFromHardware();
         }
 
-        // === 回讀暫存器 ===
         public void RefreshFromHardware()
         {
             try
             {
                 EnsurePatternOptionsFromJson();
 
-                // 1️⃣ 讀取 TOTAL
+                // 1) 讀 TOTAL，轉 UI 值（1..22）
                 byte totalRaw = RegMap.Read8("BIST_PT_TOTAL");
-                int total = ((int)totalRaw & TotalMask) + 1;
-                total = Clamp(total, 1, MaxOrders);
+                int totalHw = ((int)totalRaw & TotalMask) + 1;
+                totalHw = Clamp(totalHw, 1, MaxOrders);
 
+                // 2) 先確保清單吃得下硬體 total（重點：避免 SelectedValue 不在 ItemsSource）
+                EnsureTotalOptionsCovers(totalHw);
+
+                // 3) 再設 Total 並調整 slot
                 _isHydrating = true;
                 try
                 {
-                    Total = total;
-                    ResizeOrders(total);
+                    Total = totalHw;
+                    ResizeOrders(totalHw);
                 }
                 finally { _isHydrating = false; }
 
-                // 2️⃣ 讀取每張圖順序
-                for (int i = 0; i < total; i++)
+                System.Diagnostics.Debug.WriteLine($"[AutoRun] Read TOTAL raw=0x{totalRaw:X2} → UI={totalHw}");
+
+                // 4) 逐張讀 ORD
+                for (int i = 0; i < totalHw; i++)
                 {
                     string reg = "BIST_PT_ORD" + i;
                     byte val = RegMap.Read8(reg);
                     int idx = val & OrdMask;
 
                     if (!OptionExists(idx))
-                        idx = 0;
+                        idx = DefaultOptionIndex();
 
                     Orders[i].SelectedIndex = idx;
-
-                    System.Diagnostics.Debug.WriteLine($"[AutoRun] ORD{i:D2} = 0x{val:X2} ({LookupName(idx)})");
+                    System.Diagnostics.Debug.WriteLine($"[AutoRun] Read {reg} = 0x{val:X2} → idx={idx} ({LookupName(idx)})");
                 }
-
-                System.Diagnostics.Debug.WriteLine("[AutoRun] RefreshFromHardware done.");
             }
             catch (Exception ex)
             {
@@ -156,69 +207,70 @@ namespace BistMode.ViewModels
             }
         }
 
-        // === Resize ===
+        // ========== 內部邏輯 ==========
         private void ResizeOrders(int desired)
         {
-            desired = Clamp(desired, 1, MaxOrders);
+            int need = Clamp(desired, 1, MaxOrders);
             int old = Orders.Count;
 
-            // grow
-            while (Orders.Count < desired)
+            while (Orders.Count < need)
                 Orders.Add(new OrderSlot { DisplayNo = Orders.Count + 1, SelectedIndex = 0 });
 
-            // shrink
-            while (Orders.Count > desired)
+            while (Orders.Count > need)
                 Orders.RemoveAt(Orders.Count - 1);
 
-            // 若 preferHw：讀新 slot 的硬體值
-            if (_preferHw && desired > old)
+            // 若偏好硬體，Total 從小變大時，僅回填新段（不動舊段）
+            if (_preferHw && need > old)
             {
-                for (int i = old; i < desired; i++)
+                for (int i = old; i < need; i++)
                 {
                     string reg = "BIST_PT_ORD" + i;
                     try
                     {
                         byte val = RegMap.Read8(reg);
                         int idx = val & OrdMask;
-                        if (!OptionExists(idx)) idx = 0;
+                        if (!OptionExists(idx)) idx = DefaultOptionIndex();
                         Orders[i].SelectedIndex = idx;
 
                         System.Diagnostics.Debug.WriteLine(
-                            $"[AutoRun] Resize new slot ORD{i:D2} <- 0x{val:X2} ({LookupName(idx)})");
+                            $"[AutoRun] Grow slot {reg} <- 0x{val:X2} (idx={idx} {LookupName(idx)})");
                     }
                     catch
                     {
-                        Orders[i].SelectedIndex = 0;
+                        Orders[i].SelectedIndex = DefaultOptionIndex();
                     }
                 }
             }
+
+            // 重設顯示序號（1-based）
+            for (int i = 0; i < Orders.Count; i++)
+                Orders[i].DisplayNo = i + 1;
         }
 
-        // === JSON 預設填入 ===
         private void HydrateOrdersFromJsonDefaultsForRange(int start, int count)
         {
             if (_cfg == null) return;
 
             var ordersObj = _cfg["orders"] as JObject;
-            if (ordersObj == null) return;
-
-            var defArray = ordersObj["defaults"] as JArray;
-            if (defArray == null || defArray.Count == 0) return;
+            var defArray = ordersObj != null ? ordersObj["defaults"] as JArray : null;
+            if (defArray == null || defArray.Count == 0) // 沒提供 defaults 就用 options 順序
+            {
+                for (int i = 0; i < count && (i + start) < Orders.Count; i++)
+                {
+                    int idx = (i + start) < PatternOptions.Count ? PatternOptions[i + start].Index : DefaultOptionIndex();
+                    Orders[i + start].SelectedIndex = idx;
+                }
+                return;
+            }
 
             for (int i = 0; i < count && (i + start) < Orders.Count; i++)
             {
-                int defIdx = defArray.Count > (i + start)
-                    ? defArray[i + start].Value<int>()
-                    : 0;
-
-                if (defIdx < 0 || defIdx >= PatternOptions.Count)
-                    defIdx = 0;
-
+                int defIdx = defArray.Count > (i + start) ? defArray[i + start].Value<int>() : DefaultOptionIndex();
+                if (!OptionExists(defIdx)) defIdx = DefaultOptionIndex();
                 Orders[i + start].SelectedIndex = defIdx;
             }
         }
 
-        // === Helper ===
         private void EnsurePatternOptionsFromJson()
         {
             if (PatternOptions.Count > 0 || _cfg == null) return;
@@ -230,7 +282,7 @@ namespace BistMode.ViewModels
             foreach (var t in optArr)
             {
                 var o = t as JObject; if (o == null) continue;
-                int idx = o["index"]?.Value<int>() ?? 0;
+                int idx = o["index"] != null ? o["index"].Value<int>() : 0;
                 string name = (string)o["name"] ?? idx.ToString();
                 PatternOptions.Add(new PatternOption { Index = idx, Display = name });
             }
@@ -245,21 +297,25 @@ namespace BistMode.ViewModels
 
         private bool OptionExists(int idx)
         {
-            foreach (var p in PatternOptions)
-                if (p.Index == idx)
-                    return true;
+            for (int i = 0; i < PatternOptions.Count; i++)
+                if (PatternOptions[i].Index == idx) return true;
             return false;
+        }
+
+        private int DefaultOptionIndex()
+        {
+            return PatternOptions.Count > 0 ? PatternOptions[0].Index : 0;
         }
 
         private string LookupName(int idx)
         {
-            foreach (var p in PatternOptions)
-                if (p.Index == idx)
-                    return p.Display ?? idx.ToString();
+            for (int i = 0; i < PatternOptions.Count; i++)
+                if (PatternOptions[i].Index == idx)
+                    return PatternOptions[i].Display ?? idx.ToString();
             return idx.ToString();
         }
 
-        // === Inner Types ===
+        // ===== 內部型別 =====
         public sealed class PatternOption
         {
             public int Index { get; set; }
