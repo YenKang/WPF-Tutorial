@@ -1,6 +1,4 @@
 using System;
-using System.Globalization;
-using System.Linq;
 using System.Windows.Input;
 using Newtonsoft.Json.Linq;
 using Utility.MVVM.Command;
@@ -10,19 +8,19 @@ namespace BistMode.ViewModels
     public class GrayReverseVM : ViewModelBase
     {
         private JObject _cfg;
-        private bool _preferHw = false; // ✨ 只要 Set 過，就改用硬體真值
-        private string _axisKey;
+        private bool _preferHw = false; // ✅ 一旦 Set 成功，之後切圖/顯示都優先讀硬體
 
-        // === 屬性 ===
+        // === 綁定屬性 ===
         public string Axis
         {
             get => GetValue<string>();
             set => SetValue(value);
         }
 
-        public bool? Enable
+        // ✅ 非三態：true/false；不管值是啥都要能寫入
+        public bool Enable
         {
-            get => GetValue<bool?>();
+            get => GetValue<bool>();
             set => SetValue(value);
         }
 
@@ -32,66 +30,57 @@ namespace BistMode.ViewModels
             set => SetValue(value);
         }
 
+        // === Command ===
         public ICommand ApplyCommand { get; }
 
         public GrayReverseVM()
         {
-            ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
-            Axis = "H"; // 預設軸向
+            ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite); // 永遠可寫
+            Axis = "H";
         }
 
-        // === LoadFrom(JSON) ===
+        // === 初次/切圖：先吃 JSON；若已 Set 過則嘗試用硬體真值覆蓋 ===
         public void LoadFrom(object jsonCfg)
         {
             _cfg = jsonCfg as JObject;
             if (_cfg == null) return;
 
-            // 1️⃣ 讀 axis
+            // 1) Axis
             var axisTok = _cfg["axis"];
-            var axis = axisTok != null ? axisTok.ToString().Trim().ToUpperInvariant() : "H";
-            Axis = (axis == "V") ? "V" : "H";
+            var axisStr = axisTok?.ToString()?.Trim()?.ToUpperInvariant();
+            Axis = (axisStr == "V") ? "V" : "H";
 
-            // 2️⃣ 讀 default
+            // 2) JSON default
             int def = (int?)_cfg["default"] ?? 0;
-            Enable = (def != 0) ? true : (bool?)false;
+            Enable = (def != 0);
 
-            Title = (Axis == "V")
-                ? "Vertical Gray Reverse"
-                : "Horizontal Gray Reverse";
+            Title = (Axis == "V") ? "Vertical Gray Reverse" : "Horizontal Gray Reverse";
 
-            // 3️⃣ 若已經 Set 過，優先讀暫存器真值覆蓋
+            // 3) 如果曾經 Set 過，優先回讀硬體覆蓋顯示（讀不到就保留 JSON 值）
             if (_preferHw)
             {
-                if (!TryRefreshFromRegister())
-                {
-                    // 讀不到 → 保留 JSON 值（不覆寫）
-                    System.Diagnostics.Debug.WriteLine("[GrayReverse] HW not available, keep JSON default");
-                }
+                TryRefreshFromRegister();
             }
         }
 
-        // === Execute Write (Set) ===
+        // === Set：不論 Enable true/false 都會寫入；寫完啟用硬體優先 ===
         private void ExecuteWrite()
         {
-            if (!Enable.HasValue)
-            {
-                System.Diagnostics.Debug.WriteLine("[GrayReverse] Skip write: Enable is null");
-                return;
-            }
-
             try
             {
                 var (reg, mask, shift) = GetAxisSpec(Axis);
-                byte valueShifted = (byte)(((Enable.Value ? 1 : 0) << shift) & mask);
+
+                // Rmw8 第 3 參數需先位移好 + mask 對齊
+                byte valueShifted = (byte)(((Enable ? 1 : 0) << shift) & mask);
                 RegMap.Rmw8(reg, mask, valueShifted);
 
-                // ✅ 寫入成功後，改用硬體真值
+                // ✅ 之後以硬體真值為主
                 _preferHw = true;
 
-                // 寫完立即回讀同步（確保 UI 與暫存器一致）
+                // 寫完立即回讀，讓 UI 與暫存器一致
                 TryRefreshFromRegister();
 
-                System.Diagnostics.Debug.WriteLine($"[GrayReverse] Write success: Axis={Axis}, Enable={Enable}");
+                System.Diagnostics.Debug.WriteLine($"[GrayReverse] Write OK: Axis={Axis}, Value={(Enable ? 1 : 0)}");
             }
             catch (Exception ex)
             {
@@ -99,37 +88,33 @@ namespace BistMode.ViewModels
             }
         }
 
-        // === 回讀暫存器 ===
+        // === 回讀暫存器（讀不到就不覆蓋 UI） ===
         public void RefreshFromRegister()
         {
-            try
-            {
-                var (reg, mask, shift) = GetAxisSpec(Axis);
-                int raw = RegMap.Read8(reg);
-                Enable = ((raw & mask) >> shift) != 0;
-
-                System.Diagnostics.Debug.WriteLine($"[GrayReverse] Refresh OK: Axis={Axis}, Enable={Enable}");
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine("[GrayReverse] Refresh failed: " + ex.Message);
-                throw; // 交給 Try 包
-            }
+            var (reg, mask, shift) = GetAxisSpec(Axis);
+            int raw = RegMap.Read8(reg);
+            Enable = ((raw & mask) >> shift) != 0;
+            System.Diagnostics.Debug.WriteLine($"[GrayReverse] Refresh OK: Axis={Axis}, Enable={Enable}");
         }
 
         private bool TryRefreshFromRegister()
         {
             try { RefreshFromRegister(); return true; }
-            catch { return false; }
+            catch (Exception ex)
+            {
+                // 硬體讀不到 → 保留目前畫面值（JSON 或剛輸入的值），不洗掉
+                System.Diagnostics.Debug.WriteLine("[GrayReverse] Refresh skipped: " + ex.Message);
+                return false;
+            }
         }
 
-        // === 軸向對照 ===
+        // === 軸向對照：依 datasheet 調整（示例：同一顆暫存器，V=bit5、H=bit4） ===
         private static (string reg, byte mask, int shift) GetAxisSpec(string axis)
         {
             const string REG = "BIST_GrayColor_VH_Reverse";
             return (axis == "V")
-                ? (REG, (byte)0x20, 5)  // bit5
-                : (REG, (byte)0x10, 4); // bit4
+                ? (REG, (byte)0x20, 5)  // V → bit5
+                : (REG, (byte)0x10, 4); // H → bit4
         }
     }
 }
