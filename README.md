@@ -41,3 +41,32 @@ private void Apply()
     System.Diagnostics.Debug.WriteLine(
         $"[Chessboard.Apply] HRes={HRes} => th={th}, hPlus={hPlus};  VRes={VRes} => tv={tv}, vPlus={vPlus}; M={m}, N={n}");
 }
+
+
+
+===
+
+public void RefreshFromRegister()
+{
+    var m = M <= 0 ? 1 : M;
+    var n = N <= 0 ? 1 : N;
+
+    // H: 13 bits + plus-count
+    int hL    = RegMap.Read8("BIST_CHESSBOARD_H_TOGGLE_W_L");
+    int hH    = RegMap.Read8("BIST_CHESSBOARD_H_TOGGLE_W_H") & 0x1F;
+    int th    = (hH << 8) | hL;                  // base width
+    int hPlus = RegMap.Read8("BIST_CHESSBOARD_H_PLUS1_BLKNUM") & 0xFF; // +1 分配數
+
+    // V: 12 bits + plus-count
+    int vL    = RegMap.Read8("BIST_CHESSBOARD_V_TOGGLE_W_L");
+    int vH    = RegMap.Read8("BIST_CHESSBOARD_V_TOGGLE_W_H") & 0x0F;
+    int tv    = (vH << 8) | vL;                  // base height
+    int vPlus = RegMap.Read8("BIST_CHESSBOARD_V_PLUS1_BLKNUM") & 0xFF; // +1 分配數
+
+    // 還原出解析度：總像素 = base * splits + plusCount
+    HRes = Clamp(th * m + hPlus, HResMin, HResMax);
+    VRes = Clamp(tv * n + vPlus, VResMin, VResMax);
+
+    System.Diagnostics.Debug.WriteLine(
+        $"[Chessboard.Refresh] th={th}, hPlus={hPlus} => HRes={HRes};  tv={tv}, vPlus={vPlus} => VRes={VRes};  M={m}, N={n}");
+}
