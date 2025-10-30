@@ -1,55 +1,39 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using Utility.MVVM;
 using Utility.MVVM.Command;
 
 namespace BistMode.ViewModels
 {
     public sealed class AutoRunVM : ViewModelBase
     {
-        // ===== 常數（若 JSON 有覆蓋，以 JSON 為準） =====
-        private const int TotalMinDefault = 1;
-        private const int TotalMaxDefault = 22;
-        private const int TotalDefDefault = 22;
+        private bool _preferHw = false; // Set 過後改讀硬體
+        private JObject _cfg;
 
-        // BIST_PT_TOTAL 的值只有 5 bits
-        private const byte TotalValueMask = 0x1F;
+        // === 暫存器對應 ===
+        private string _totalTarget = "";             // BIST_PT_TOTAL
+        private string[] _orderTargets = new string[0]; // BIST_PT_ORD0~ORD21
 
-        // ===== JSON 解析後的目標暫存器 =====
-        private string _totalTarget;               // e.g. "BIST_PT_TOTAL"
-        private string[] _orderTargets = Array.Empty<string>();  // e.g. ORD0..ORD21
-        private string _triggerTarget;            // 可選：寫完要觸發的暫存器
-        private byte _triggerValue;               // 可選：觸發值
+        // === Pattern Total Combo ===
+        public ObservableCollection<int> TotalOptions { get; } = new ObservableCollection<int>();
 
-        // ===== 由 JSON options 建名單與查表 =====
-        public ObservableCollection<PatternOption> PatternOptions { get; } = new();
-        private readonly Dictionary<int, string> _indexToName = new();
-
-        // ===== Orders：UI 上 N 個下拉（實際只存 Index） =====
-        public ObservableCollection<OrderSlot> Orders { get; } = new();
-
-        // 允許 1..22（或 JSON 指定的 min/max）
+        private int _total;
         public int Total
         {
-            get => GetValue<int>();
+            get => _total;
             set
             {
-                if (!SetValue(value)) return;
-                ResizeOrders(value);
+                if (SetValue(ref _total, value))
+                    ResizeOrders(_total);
             }
         }
 
-        // 是否優先以硬體真值為準（一旦 Set 過就會設為 true）
-        private bool _preferHw;
+        // === Orders ===
+        public ObservableCollection<OrderSlot> Orders { get; } = new ObservableCollection<OrderSlot>();
 
-        public string Title
-        {
-            get => GetValue<string>();
-            private set => SetValue(value);
-        }
+        // === Pattern 選項清單 ===
+        public ObservableCollection<PatternOption> PatternOptions { get; } = new ObservableCollection<PatternOption>();
 
         public ICommand ApplyCommand { get; }
 
@@ -58,111 +42,78 @@ namespace BistMode.ViewModels
             ApplyCommand = CommandFactory.CreateCommand(Apply);
         }
 
-        // ================== JSON 載入 ==================
-
-        /// <summary>由 Pattern JSON 的 autoRunControl 節點載入。</summary>
-        public void LoadFrom(JObject autoRunControl)
+        // ========== 由 JSON 載入設定 ==========
+        public void LoadFrom(JObject node)
         {
-            if (autoRunControl == null) return;
+            _cfg = node;
+            if (_cfg == null) return;
 
-            Title = (string)autoRunControl["title"] ?? "Auto Run";
+            // 1️⃣ 讀 Pattern Title (optional)
+            Title = (string?)_cfg["title"] ?? "Auto Run";
 
-            // ---- total ----
-            var totalObj = autoRunControl["total"] as JObject;
-            _totalTarget = (string)totalObj?["target"]; // 可為 null（就不寫 total）
-            int totalMin = totalObj?["min"]?.Value<int>() ?? TotalMinDefault;
-            int totalMax = totalObj?["max"]?.Value<int>() ?? TotalMaxDefault;
-            int totalDef = totalObj?["default"]?.Value<int>() ?? TotalDefDefault;
+            // 2️⃣ 讀 total
+            var totalObj = _cfg["total"] as JObject;
+            _totalTarget = (string?)totalObj?["target"] ?? "BIST_PT_TOTAL";
+            int min = (int?)totalObj?["min"] ?? 1;
+            int max = (int?)totalObj?["max"] ?? 22;
+            int def = (int?)totalObj?["default"] ?? 22;
 
-            // 先設總數（會 resize Orders）
-            Total = Clamp(totalDef, totalMin, totalMax);
+            TotalOptions.Clear();
+            for (int i = min; i <= max; i++) TotalOptions.Add(i);
+            Total = Clamp(def, min, max);
 
-            // ---- orders ----
-            var ordersObj = autoRunControl["orders"] as JObject;
-            _orderTargets = ordersObj?["targets"]?.ToObject<string[]>() ?? Array.Empty<string>();
-            var defaults = ordersObj?["defaults"]?.ToObject<int[]>() ?? Array.Empty<int>();
-
+            // 3️⃣ 讀 orders
+            var ordersObj = _cfg["orders"] as JObject;
+            _orderTargets = ordersObj?["targets"]?.ToObject<string[]>() ?? new string[0];
             Orders.Clear();
-            for (int i = 0; i < Total; i++)
-            {
-                Orders.Add(new OrderSlot
-                {
-                    DisplayNo = i + 1,
-                    SelectedIndex = (i < defaults.Length) ? defaults[i] : 0
-                });
-            }
+            for (int i = 0; i < Total; i++) Orders.Add(new OrderSlot { DisplayNo = i + 1 });
 
-            // ---- options → 建名單 & 對照表 ----
-            BuildPatternNameMapFromJson(autoRunControl);
-
-            // ---- trigger（可選）----
-            var trig = autoRunControl["trigger"] as JObject;
-            _triggerTarget = (string)trig?["target"];
-            _triggerValue = ParseHexByte((string)trig?["value"], 0x00);
-
-            // 若過去已按過 Set，就優先用硬體真值覆寫 UI
-            if (_preferHw) RefreshFromRegister();
-        }
-
-        /// <summary>從 JSON 的 options 建 PatternOptions 與 _indexToName。</summary>
-        private void BuildPatternNameMapFromJson(JObject autoRunControl)
-        {
+            // 4️⃣ 讀 options (index-name 對照)
             PatternOptions.Clear();
-            _indexToName.Clear();
-
-            var arr = autoRunControl["options"] as JArray;
-            if (arr != null && arr.Count > 0)
+            if (_cfg["options"] is JArray arr)
             {
-                foreach (var t in arr.OfType<JObject>())
+                foreach (JObject o in arr.OfType<JObject>())
                 {
-                    int idx = t["index"]?.Value<int>() ?? 0;
-                    string name = t["name"]?.Value<string>() ?? idx.ToString();
-                    _indexToName[idx] = name;
+                    int idx = (int?)o["index"] ?? 0;
+                    string name = (string?)o["name"] ?? idx.ToString();
                     PatternOptions.Add(new PatternOption { Index = idx, Display = name });
                 }
             }
-            else
+
+            // 5️⃣ 若曾 Set 過 → 改用硬體回讀覆寫
+            if (_preferHw)
             {
-                // 若 JSON 未提供 options，可自行填入 fallback 名單（可留空）
+                try { RefreshFromRegister(); }
+                catch (Exception ex) { System.Diagnostics.Debug.WriteLine("[AutoRun] skip refresh: " + ex.Message); }
             }
         }
 
-        // ================== Apply（寫入暫存器） ==================
-
+        // ========== 寫入暫存器 (Set AutoRun) ==========
         private void Apply()
         {
+            if (_cfg == null) return;
+
             try
             {
-                // Step 1: Total（可選）
+                // 寫入總數
                 if (!string.IsNullOrWhiteSpace(_totalTarget))
+                    RegMap.Write8(_totalTarget, (byte)(Total & 0x1F));
+
+                // 寫入各個 ORD pattern
+                for (int i = 0; i < Orders.Count && i < _orderTargets.Length; i++)
                 {
-                    byte clamped = (byte)(Total & TotalValueMask);
-                    RegMap.Write8(_totalTarget, clamped);
+                    var tgt = _orderTargets[i];
+                    if (string.IsNullOrWhiteSpace(tgt)) continue;
+
+                    int idx = Orders[i].SelectedIndex & 0x3F; // 6 bits
+                    RegMap.Write8(tgt, (byte)idx);
                 }
 
-                // Step 2: ORD 寫入（依目前 Orders 長度）
-                int count = Math.Min(Orders.Count, _orderTargets.Length);
-                for (int i = 0; i < count; i++)
-                {
-                    string target = _orderTargets[i];
-                    if (string.IsNullOrWhiteSpace(target)) continue;
-                    byte idx = (byte)(Orders[i].SelectedIndex & 0x3F); // 6bits
-                    RegMap.Write8(target, idx);
-                }
-
-                // Step 3: 觸發（可選）
-                if (!string.IsNullOrWhiteSpace(_triggerTarget))
-                {
-                    RegMap.Write8(_triggerTarget, _triggerValue);
-                }
-
-                // 之後以硬體真值為準
+                // ✅ 寫入完成 → 啟用硬體模式
                 _preferHw = true;
-
-                // 寫完立即回讀同步
                 RefreshFromRegister();
 
-                System.Diagnostics.Debug.WriteLine("[AutoRun] Apply OK.");
+                System.Diagnostics.Debug.WriteLine($"[AutoRun] Apply OK: Total={Total}");
             }
             catch (Exception ex)
             {
@@ -170,64 +121,61 @@ namespace BistMode.ViewModels
             }
         }
 
-        // ================== Refresh（回讀暫存器 → 覆寫 UI） ==================
-
+        // ========== 從暫存器回讀 ==========
         public void RefreshFromRegister()
         {
-            try
+            if (!_preferHw) return;
+
+            // 1️⃣ 讀取總數
+            if (!string.IsNullOrWhiteSpace(_totalTarget))
             {
-                if (_orderTargets == null || _orderTargets.Length == 0) return;
-
-                int readCount = Math.Min(Orders.Count, _orderTargets.Length);
-
-                for (int i = 0; i < readCount; i++)
+                int raw = RegMap.Read8(_totalTarget) & 0x1F;
+                if (TotalOptions.Count > 0)
                 {
-                    string target = _orderTargets[i];
-                    if (string.IsNullOrWhiteSpace(target)) continue;
-
-                    int raw = RegMap.Read8(target) & 0x3F; // 只收 6bits
-                    Orders[i].SelectedIndex = raw;
-
-                    // 方便看 log：轉名稱
-                    string name = _indexToName.TryGetValue(raw, out var disp) ? disp : $"Pattern {raw}";
-                    System.Diagnostics.Debug.WriteLine($"[AutoRun] ORD{i} = {raw} ({name})");
+                    int min = TotalOptions[0];
+                    int max = TotalOptions[TotalOptions.Count - 1];
+                    Total = Math.Max(min, Math.Min(max, raw));
+                }
+                else
+                {
+                    Total = raw;
                 }
             }
-            catch (Exception ex)
+
+            // 2️⃣ 逐一回讀 ORDx 值
+            for (int i = 0; i < Orders.Count && i < _orderTargets.Length; i++)
             {
-                System.Diagnostics.Debug.WriteLine("[AutoRun] RefreshFromRegister failed: " + ex.Message);
+                var tgt = _orderTargets[i];
+                if (string.IsNullOrWhiteSpace(tgt)) continue;
+
+                int idx = RegMap.Read8(tgt) & 0x3F;
+                Orders[i].SelectedIndex = idx;
+
+                // debug log
+                var match = PatternOptions.FirstOrDefault(p => p.Index == idx);
+                string name = match?.Display ?? idx.ToString();
+                System.Diagnostics.Debug.WriteLine($"[AutoRun] ORD{i:D2}={idx:D2} ({name})");
             }
         }
 
-        // ================== 小工具 ==================
-
-        private void ResizeOrders(int desiredCount)
-        {
-            if (desiredCount < 0) desiredCount = 0;
-
-            while (Orders.Count < desiredCount)
-                Orders.Add(new OrderSlot { DisplayNo = Orders.Count + 1, SelectedIndex = 0 });
-
-            while (Orders.Count > desiredCount)
-                Orders.RemoveAt(Orders.Count - 1);
-
-            // 重排顯示序號
-            for (int i = 0; i < Orders.Count; i++)
-                Orders[i].DisplayNo = i + 1;
-        }
-
+        // ========== 小工具 ==========
         private static int Clamp(int v, int min, int max)
             => v < min ? min : (v > max ? max : v);
 
-        private static byte ParseHexByte(string hexOrNull, byte fallback)
+        private void ResizeOrders(int desired)
         {
-            if (string.IsNullOrWhiteSpace(hexOrNull)) return fallback;
-            var s = hexOrNull.Trim();
-            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
-            return byte.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out var b) ? b : fallback;
+            while (Orders.Count < desired)
+                Orders.Add(new OrderSlot { DisplayNo = Orders.Count + 1 });
+            while (Orders.Count > desired)
+                Orders.RemoveAt(Orders.Count - 1);
         }
 
-        // ================== 內部型別 ==================
+        // === 子類別 ===
+        public sealed class OrderSlot : ViewModelBase
+        {
+            public int DisplayNo { get => GetValue<int>(); set => SetValue(value); }
+            public int SelectedIndex { get => GetValue<int>(); set => SetValue(value); }
+        }
 
         public sealed class PatternOption
         {
@@ -235,20 +183,6 @@ namespace BistMode.ViewModels
             public string Display { get; set; }
         }
 
-        public sealed class OrderSlot : ViewModelBase
-        {
-            public int DisplayNo
-            {
-                get => GetValue<int>();
-                set => SetValue(value);
-            }
-
-            // ComboBox SelectedValue 綁在這個 Index
-            public int SelectedIndex
-            {
-                get => GetValue<int>();
-                set => SetValue(value);
-            }
-        }
+        public string Title { get => GetValue<string>(); set => SetValue(value); }
     }
 }
