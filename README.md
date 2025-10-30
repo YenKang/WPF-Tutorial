@@ -1,24 +1,10 @@
-private void SafeSetTotal(int v)
+private void BuildTotalOptions(int min, int max)
 {
-    v = Clamp(v, 1, MaxOrders);
-    System.Diagnostics.Debug.WriteLine($"[SafeSetTotal] start v={v}, TotalOptions.Count={TotalOptions.Count}");
+    _totalMin = Clamp(min, 1, MaxOrders);
+    _totalMax = Clamp(max, 1, MaxOrders);
+    if (_totalMin > _totalMax) { var t = _totalMin; _totalMin = _totalMax; _totalMax = t; }
 
-    if (TotalOptions.Count == 0)
-    {
-        System.Diagnostics.Debug.WriteLine("[SafeSetTotal] TotalOptions empty, defer via Dispatcher");
-        System.Windows.Application.Current.Dispatcher.BeginInvoke(
-            new Action(() =>
-            {
-                EnsureTotalOptionsCovers(v);
-                Total = v;
-                System.Diagnostics.Debug.WriteLine($"[SafeSetTotal-defer] applied Total={Total}");
-            }),
-            System.Windows.Threading.DispatcherPriority.Background
-        );
-        return;
-    }
-
-    EnsureTotalOptionsCovers(v);
-    Total = v;
-    System.Diagnostics.Debug.WriteLine($"[SafeSetTotal] done Total={Total}, TotalOptions.Count={TotalOptions.Count}");
+    TotalOptions.Clear();
+    for (int v = _totalMin; v <= _totalMax; v++) TotalOptions.Add(v);
+    System.Diagnostics.Debug.WriteLine($"[BuildTotalOptions] built {_totalMin}-{_totalMax}, count={TotalOptions.Count}");
 }
