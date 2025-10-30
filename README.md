@@ -1,56 +1,74 @@
-public void RefreshFromHardware()
+public void LoadFrom(JObject autoRunControl)
 {
-    if (!_preferHw) return;
+    _cfg = autoRunControl;
 
-    try
+    // 1) 讀 Title（不論是否 _preferHw 都可更新）
+    Title = (_cfg != null && _cfg["title"] != null) ? _cfg["title"].ToString() : "Auto Run";
+
+    // 2) 讀 options（index↔name）→ UI 顯示與 log 對照表
+    PatternOptions.Clear();
+    _indexToName.Clear();
+    if (_cfg != null && _cfg["options"] is JArray opts)
     {
-        int hwRaw   = RegMap.Read8(REG_TOTAL) & TOTAL_MASK; // 0..21
-        int uiTotal = Clamp(hwRaw + 1, TOTAL_MIN, TOTAL_MAX);
-
-        // 確保 TotalOptions 含有 uiTotal（避免 SelectedItem 空白）
-        if (TotalOptions.Count == 0 || uiTotal < TotalOptions[0] || uiTotal > TotalOptions[TotalOptions.Count - 1])
+        foreach (JObject o in opts)
         {
-            BuildTotalOptions(TOTAL_MIN, TOTAL_MAX);
+            int idx = (int?)o["index"] ?? 0;
+            string name = (string)o["name"] ?? idx.ToString();
+            PatternOptions.Add(new PatternOption { Index = idx, Display = name });
+            if (!_indexToName.ContainsKey(idx)) _indexToName.Add(idx, name);
         }
+    }
+    else
+    {
+        // fallback：至少補 0..63，避免空選單
+        for (int i = 0; i < 64; i++)
+        {
+            PatternOptions.Add(new PatternOption { Index = i, Display = i.ToString() });
+            if (!_indexToName.ContainsKey(i)) _indexToName.Add(i, i.ToString());
+        }
+    }
 
-        Total = uiTotal; // 會 ResizeOrders()
+    // 3) 先依 JSON 建好 TotalOptions（但先不動 Total）
+    int def = 22, min = TOTAL_MIN, max = TOTAL_MAX;
+    var totalObj = (_cfg != null) ? _cfg["total"] as JObject : null;
+    if (totalObj != null)
+    {
+        def = (int?)totalObj["default"] ?? def;
+        min = (int?)totalObj["min"] ?? min;
+        max = (int?)totalObj["max"] ?? max;
+    }
+    BuildTotalOptions(min, max);
 
+    // 4) 若之前按過 Set（_preferHw=true）→ 直接回讀硬體，完全跳過 JSON 重設！
+    if (_preferHw)
+    {
+        System.Diagnostics.Debug.WriteLine("[AutoRun] LoadFrom(): preferHw=true → skip JSON defaults, refresh HW");
+        TryRefreshFromHardware();
+        return;
+    }
+
+    // 5) 第一次進來（或 Reset 後）：用 JSON default 初始化
+    System.Diagnostics.Debug.WriteLine("[AutoRun] LoadFrom(): preferHw=false → use JSON defaults");
+
+    // 設定 Total
+    Total = Clamp(def, min, max);     // setter 會自動 ResizeOrders()
+
+    // 初始化 Orders 選項（先清空再建 N 筆）
+    Orders.Clear();
+    for (int i = 0; i < Total; i++)
+        Orders.Add(new OrderSlot { DisplayNo = i + 1, SelectedIndex = 0 });
+
+    // 若 JSON 有 orders.defaults → 套用；否則用前 N 個遞增
+    var ordersObj = (_cfg != null) ? _cfg["orders"] as JObject : null;
+    var defaults  = (ordersObj != null) ? ordersObj["defaults"] as JArray : null;
+    if (defaults != null && defaults.Count > 0)
+    {
+        for (int i = 0; i < Total && i < defaults.Count; i++)
+            Orders[i].SelectedIndex = (int?)defaults[i] ?? 0;
+    }
+    else
+    {
         for (int i = 0; i < Total; i++)
-        {
-            int v = RegMap.Read8(REG_ORD(i)) & ORD_MASK;
-            Orders[i].SelectedIndex = v;
-        }
-
-        System.Diagnostics.Debug.WriteLine($"[AutoRun] Read TOTAL UI={uiTotal} (raw={hwRaw})");
-    }
-    catch (Exception ex)
-    {
-        System.Diagnostics.Debug.WriteLine("[AutoRun] RefreshFromHardware failed: " + ex.Message);
-    }
-}
-
-＝＝＝＝＝
-private void Apply()
-{
-    try
-    {
-        int uiTotal = Clamp(Total, TOTAL_MIN, TOTAL_MAX);
-        byte hwTotal = (byte)((uiTotal - 1) & TOTAL_MASK);
-        RegMap.Write8(REG_TOTAL, hwTotal);
-
-        for (int i = 0; i < uiTotal; i++)
-        {
-            int patternIndex = Orders[i].SelectedIndex & ORD_MASK;
-            RegMap.Write8(REG_ORD(i), (byte)patternIndex);
-        }
-        for (int i = uiTotal; i < TOTAL_MAX; i++)
-            RegMap.Write8(REG_ORD(i), 0x00);
-
-        _preferHw = true;          // ← 切回頁面走硬體
-        TryRefreshFromHardware();  // ← 寫完立即同步一次（保險）
-    }
-    catch (Exception ex)
-    {
-        System.Diagnostics.Debug.WriteLine("[AutoRun] Apply failed: " + ex.Message);
+            Orders[i].SelectedIndex = (i < PatternOptions.Count) ? PatternOptions[i].Index : 0;
     }
 }
