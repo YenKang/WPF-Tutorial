@@ -45,3 +45,4 @@ private void Apply()
         System.Diagnostics.Debug.WriteLine("[AutoRun] Apply failed: " + ex.Message);
     }
 }
+
