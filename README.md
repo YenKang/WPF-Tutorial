@@ -1,148 +1,123 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using Newtonsoft.Json.Linq;
 using Utility.MVVM.Command;
 
 namespace BistMode.ViewModels
 {
-    public class BWLoopVM : ViewModelBase
+    /// <summary>
+    /// Flicker RGB Control
+    /// - JSON:
+    ///   { "defaults": { "P1": {"R":..,"G":..,"B":..}, ... },
+    ///     "pairs": [ { "target":"REG", "low":"P1.R", "high":"P2.R" }, ... ] }
+    /// - 寫入：每個 pair 將兩個 4bit (low/high) 打成 1 byte 寫入暫存器
+    /// - 回讀：依 pairs 反解 nibble → 反填到 P1~P4 的 R/G/B
+    /// - _preferHw：第一次 Set 成功後，後續切圖一律以硬體真值覆蓋 UI
+    /// </summary>
+    public sealed class FlickerRGBVM : ViewModelBase
     {
-        private JObject _cfg;
-
-        // 一旦 Set 成功 -> 後續以硬體真值覆蓋 UI
-        private bool _preferHw = false;
-
-        // ===== JSON: 整值範圍與預設 =====
-        private int _min = 0x000;
-        private int _max = 0x3FF;          // 10-bit
-        private int _defaultValue = 0x01E; // 先給既有預設, 會被 JSON 覆蓋
-
-        // ===== 寫入目標（可由 JSON targets 覆蓋）=====
-        private string _lowAddr  = "BIST_FCNT2_LO";  // 0x0043
-        private string _highAddr = "BIST_FCNT2_HI";  // 0x0044
-        private byte   _mask     = 0x0C;             // 高位 2bits 的 mask (bit[3:2])
-        private int    _shift    = 2;                // 從 bit2 起
-
-        // ===== UI 選項 =====
-        public ObservableCollection<int> D2Options { get; } = new ObservableCollection<int>(new[] { 0, 1, 2, 3 });
-        public ObservableCollection<int> D1Options { get; } = new ObservableCollection<int>(Generate(0, 15));
-        public ObservableCollection<int> D0Options { get; } = new ObservableCollection<int>(Generate(0, 15));
-
-        // ===== 三個 nibble（D2 實際只用 2bits，UI 嚴格限制 0..3）=====
-        public int FCNT2_D2 { get => GetValue<int>(); set => SetValue(value < 0 ? 0 : (value > 3 ? 3 : value)); }
-        public int FCNT2_D1 { get => GetValue<int>(); set => SetValue(ClampNibble(value)); }
-        public int FCNT2_D0 { get => GetValue<int>(); set => SetValue(ClampNibble(value)); }
-
-        // ===== 合併為 10-bit =====
-        public int FCNT2_Value
-        {
-            get
-            {
-                int v = ((FCNT2_D2 & 0x3) << 8) | ((FCNT2_D1 & 0xF) << 4) | (FCNT2_D0 & 0xF);
-                if (v < _min) v = _min;
-                if (v > _max) v = _max;
-                return v;
-            }
-        }
+        // ---------- UI ----------
+        public ObservableCollection<PlaneVM> Planes { get; } =
+            new ObservableCollection<PlaneVM> { new PlaneVM(1), new PlaneVM(2), new PlaneVM(3), new PlaneVM(4) };
 
         public ICommand ApplyCommand { get; }
 
-        public BWLoopVM()
+        // ---------- State ----------
+        private JObject _cfg;
+        private readonly List<PairWrite> _pairs = new List<PairWrite>();
+        private bool _preferHw = false; // ✅ 寫入成功後 → 後續顯示以硬體真值為主
+
+        public FlickerRGBVM()
         {
             ApplyCommand = CommandFactory.CreateCommand(Apply);
-            // 預先塞選項（保留你原本風格）
-            if (D1Options.Count == 0 || D0Options.Count == 0)
-            {
-                D1Options.Clear(); D0Options.Clear();
-                for (int i = 0; i <= 15; i++) { D1Options.Add(i); D0Options.Add(i); }
-            }
-            // 初始 UI 值（避免空白）
-            SetFromValue(_defaultValue);
         }
 
-        // ===== 從 JSON 載入 =====
+        // ---------- Load JSON profile ----------
         public void LoadFrom(object jsonCfg)
         {
-            _cfg = jsonCfg as JObject;
-            if (_cfg == null) return;
+            _pairs.Clear();
 
-            // 讀 fcnt2 節點（default/min/max）
-            if (_cfg["fcnt2"] is JObject fcnt2)
+            if (jsonCfg is JObject jo) _cfg = jo;
+            else if (jsonCfg != null) _cfg = JObject.FromObject(jsonCfg);
+            else { _cfg = null; return; }
+
+            // 1) defaults: P1~P4 的 R/G/B
+            if (_cfg["defaults"] is JObject d)
             {
-                _defaultValue = TryParseInt((string)fcnt2["default"], _defaultValue);
-                _min          = TryParseInt((string)fcnt2["min"],      _min);
-                _max          = TryParseInt((string)fcnt2["max"],      _max);
+                ApplyDefault(d["P1"] as JObject, Planes[0]);
+                ApplyDefault(d["P2"] as JObject, Planes[1]);
+                ApplyDefault(d["P3"] as JObject, Planes[2]);
+                ApplyDefault(d["P4"] as JObject, Planes[3]);
             }
 
-            // 讀 targets（low/high/mask/shift）
-            if (_cfg["targets"] is JObject tgt)
+            // 2) pairs: 每個 pair 指定一顆 target 暫存器與 low/high 來源
+            if (_cfg["pairs"] is JArray arr)
             {
-                _lowAddr  = (string)tgt["low"]  ?? _lowAddr;
-                _highAddr = (string)tgt["high"] ?? _highAddr;
-                _mask     = ParseHexByte((string)tgt["mask"], _mask);
-                _shift    = (int?)tgt["shift"] ?? _shift;
+                foreach (var it in arr)
+                {
+                    if (it is not JObject p) continue;
+                    string target = (string)p["target"];
+                    string low    = (string)p["low"];
+                    string high   = (string)p["high"];
+                    if (string.IsNullOrWhiteSpace(target) ||
+                        string.IsNullOrWhiteSpace(low)    ||
+                        string.IsNullOrWhiteSpace(high)) continue;
+
+                    _pairs.Add(new PairWrite { Target = target, LowSrc = low, HighSrc = high });
+                }
             }
 
-            // 先用 JSON default 展開到 D2/D1/D0
-            SetFromValue(Clamp(_defaultValue, _min, _max));
-
-            // 若曾 Apply 過 -> 以硬體真值覆蓋
+            // 3) 若曾經 Set 過 → 切回來直接用硬體真值覆蓋
             if (_preferHw) TryRefreshFromRegister();
-
-            System.Diagnostics.Debug.WriteLine(
-                $"[BWLoop] LoadFrom: def=0x{_defaultValue:X3}, D2={FCNT2_D2},D1={FCNT2_D1},D0={FCNT2_D0}, preferHw={_preferHw}");
         }
 
-        // ===== Set（永遠可寫；寫完切硬體優先＋回讀）=====
+        // ---------- Set：依 pairs 寫入暫存器 ----------
         private void Apply()
         {
             bool ok = false;
 
             try
             {
-                int value = FCNT2_Value;
+                foreach (var p in _pairs)
+                {
+                    int lo = ResolveSrc(p.LowSrc);     // 0..15
+                    int hi = ResolveSrc(p.HighSrc);    // 0..15
+                    byte v = PackByte(lo, hi);         // (hi<<4) | lo
 
-                // 寫低 8 位
-                byte low = (byte)(value & 0xFF);
-                RegMap.Write8(_lowAddr, low);
-                ok = true;
+                    RegMap.Write8(p.Target, v);
+                    ok = true;
 
-                // 寫高 2 位（RMW）
-                byte hiBits  = (byte)((value >> 8) & 0x03);
-                byte curHigh = RegMap.Read8(_highAddr);
-                byte next    = (byte)((curHigh & ~_mask) | (((hiBits << _shift) & _mask)));
-                RegMap.Write8(_highAddr, next);
-                ok = true;
-
-                System.Diagnostics.Debug.WriteLine($"[BWLoop] Apply OK -> 0x{value:X3}");
+                    System.Diagnostics.Debug.WriteLine($"[FLK] {p.Target} <= {v:X2}  ({p.LowSrc},{p.HighSrc})");
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("[BWLoop] Apply failed: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("[FLK] Apply failed: " + ex.Message);
             }
 
             if (ok)
             {
-                _preferHw = true;     // 之後以硬體真值為主
-                TryRefreshFromRegister(); // 寫完立刻回讀同步 UI
+                _preferHw = true;           // ✅ 之後 UI 以硬體真值為主
+                TryRefreshFromRegister();   // ✅ 寫完立即回讀同步
             }
         }
 
-        // ===== 回讀暫存器，拆回 D2/D1/D0 =====
+        // ---------- 回讀：依 pairs 反解暫存器 → 填回 UI ----------
         public void RefreshFromRegister()
         {
-            int low  = RegMap.Read8(_lowAddr)  & 0xFF;
-            int high = RegMap.Read8(_highAddr) & 0xFF;
+            foreach (var p in _pairs)
+            {
+                byte val = RegMap.Read8(p.Target);
+                int  lo  =  val        & 0x0F;
+                int  hi  = (val >> 4)  & 0x0F;
 
-            int hi2  = (high & _mask) >> _shift;      // 取出高位 2bits
-            int v10  = ((hi2 & 0x03) << 8) | low;     // 合成 10-bit
+                AssignChannel(p.LowSrc,  lo); // e.g. "P1.R"
+                AssignChannel(p.HighSrc, hi); // e.g. "P2.G"
+            }
 
-            // 展開回 UI（D2 嚴格 0..3）
-            FCNT2_D2 = ((v10 >> 8) & 0x0F) > 3 ? 3 : ((v10 >> 8) & 0x0F);
-            FCNT2_D1 = (v10 >> 4) & 0x0F;
-            FCNT2_D0 =  v10       & 0x0F;
-
-            System.Diagnostics.Debug.WriteLine($"[BWLoop] Refresh OK: low=0x{low:X2}, high=0x{high:X2} -> 0x{v10:X3}");
+            System.Diagnostics.Debug.WriteLine("[FLK] RefreshFromRegister OK.");
         }
 
         private bool TryRefreshFromRegister()
@@ -150,51 +125,120 @@ namespace BistMode.ViewModels
             try { RefreshFromRegister(); return true; }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("[BWLoop] Refresh skipped: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("[FLK] Refresh skipped: " + ex.Message);
                 return false;
             }
         }
 
-        // ===== Helpers =====
-        private static int Clamp(int v, int min, int max) => (v < min) ? min : (v > max ? max : v);
+        // ---------- JSON helpers ----------
+        private static void ApplyDefault(JObject jo, PlaneVM vm)
+        {
+            if (jo == null || vm == null) return;
+            vm.R = GetOr(jo, "R", vm.R);
+            vm.G = GetOr(jo, "G", vm.G);
+            vm.B = GetOr(jo, "B", vm.B);
+        }
+
+        private static int GetOr(JObject jo, string key, int fb)
+        {
+            if (jo == null) return fb;
+            if (jo.TryGetValue(key, StringComparison.OrdinalIgnoreCase, out var tok))
+            {
+                if (int.TryParse(tok.ToString(), out int v)) return ClampNibble(v);
+                if (TryParseHex(tok.ToString(), out int hx)) return ClampNibble(hx);
+            }
+            return fb;
+        }
+
+        private static bool TryParseHex(string s, out int v)
+        {
+            v = 0;
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            s = s.Trim();
+            if (!s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) return false;
+            return int.TryParse(s.Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out v);
+        }
+
+        // ---------- 來源解析 / 反向指定 ----------
+        /// <summary>將 "P1.R"/"P2.G"/"P3.B" 或常數字串解析為 0..15 的值。</summary>
+        private int ResolveSrc(string src)
+        {
+            if (string.IsNullOrWhiteSpace(src)) return 0;
+            src = src.Trim().ToUpperInvariant();
+
+            // 常數: "5" / "0xA"
+            if (int.TryParse(src, out int v) || TryParseHex(src, out v)) return ClampNibble(v);
+
+            var plane = ResolvePlane(src);
+            if (plane == null) return 0;
+
+            if (src.EndsWith(".R")) return plane.R;
+            if (src.EndsWith(".G")) return plane.G;
+            if (src.EndsWith(".B")) return plane.B;
+
+            return 0;
+        }
+
+        /// <summary>把 nibble 值寫回到 "P?.R/G/B" 對應的 UI 綁定屬性。</summary>
+        private void AssignChannel(string dst, int nib)
+        {
+            if (string.IsNullOrWhiteSpace(dst)) return;
+            dst = dst.Trim().ToUpperInvariant();
+            nib = ClampNibble(nib);
+
+            var plane = ResolvePlane(dst);
+            if (plane == null) return;
+
+            if      (dst.EndsWith(".R")) plane.R = nib;
+            else if (dst.EndsWith(".G")) plane.G = nib;
+            else if (dst.EndsWith(".B")) plane.B = nib;
+        }
+
+        private PlaneVM ResolvePlane(string token)
+        {
+            // token 形如 "P1.*" ~ "P4.*"
+            if (token.Length >= 2 && token[0] == 'P' && char.IsDigit(token[1]))
+            {
+                int idx = token[1] - '1'; // P1->0
+                if (idx >= 0 && idx < Planes.Count) return Planes[idx];
+            }
+            return null;
+        }
+
+        // ---------- 小工具 ----------
+        private static byte PackByte(int low, int high)
+            => (byte)(((ClampNibble(high) & 0x0F) << 4) | (ClampNibble(low) & 0x0F));
+
         private static int ClampNibble(int v) => v < 0 ? 0 : (v > 15 ? 15 : v);
 
-        private void SetFromValue(int value)
+        // ---------- Types ----------
+        private sealed class PairWrite
         {
-            value &= 0x3FF; // 只保留 10-bit
-
-            int d2 = (value >> 8) & 0x0F; // 與你舊版一致（但 UI 會再限制 0..3）
-            int d1 = (value >> 4) & 0x0F;
-            int d0 = (value >> 0) & 0x0F;
-
-            FCNT2_D2 = d2 > 3 ? 3 : d2;   // 嚴格 2bits
-            FCNT2_D1 = d1;
-            FCNT2_D0 = d0;
+            public string Target { get; set; }   // 暫存器名稱
+            public string LowSrc { get; set; }   // "P1.R" / 常數
+            public string HighSrc { get; set; }  // "P2.G" / 常數
         }
 
-        private static int TryParseInt(string s, int fallback)
+        public sealed class PlaneVM : ViewModelBase
         {
-            if (string.IsNullOrWhiteSpace(s)) return fallback;
-            s = s.Trim();
-            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                return int.TryParse(s.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out int vHex) ? vHex : fallback;
-            return int.TryParse(s, out int v) ? v : fallback;
-        }
+            public int Index { get; }
 
-        private static byte ParseHexByte(string hexOrNull, byte fallback)
-        {
-            if (string.IsNullOrWhiteSpace(hexOrNull)) return fallback;
-            string s = hexOrNull.Trim();
-            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
-            return byte.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out byte b) ? b : fallback;
-        }
+            public ObservableCollection<int> LevelOptions { get; } =
+                new ObservableCollection<int>(Generate(0, 15));
 
-        private static int[] Generate(int a, int b)
-        {
-            int n = b - a + 1;
-            var arr = new int[n];
-            for (int i = 0; i < n; i++) arr[i] = a + i;
-            return arr;
+            public int R { get => GetValue<int>(); set => SetValue(ClampNibble(value)); }
+            public int G { get => GetValue<int>(); set => SetValue(ClampNibble(value)); }
+            public int B { get => GetValue<int>(); set => SetValue(ClampNibble(value)); }
+
+            public PlaneVM(int index) { Index = index; }
+
+            private static int[] Generate(int a, int b)
+            {
+                int n = b - a + 1;
+                var arr = new int[n];
+                for (int i = 0; i < n; i++) arr[i] = a + i;
+                return arr;
+            }
         }
     }
 }
