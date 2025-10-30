@@ -1,21 +1,17 @@
-private void ExecuteWrite()
+public void RefreshFromRegister()
 {
-    try
-    {
-        var (reg, mask, shift) = GetAxisSpec(Axis);
+    var (reg, mask, shift) = GetAxisSpec(Axis);
+    int raw = RegMap.Read8(reg);
+    Enable = ((raw & mask) >> shift) != 0;
 
-        // Rmw8(name, mask, valueShifted) 的第三參數要「先位移好」再丟
-        byte valueShifted = (byte)(((Enable ? 1 : 0) << shift) & mask);
+    System.Diagnostics.Debug.WriteLine($"[GrayReverse] Refresh: Axis={Axis}, Enable={Enable}");
+}
 
-        RegMap.Rmw8(reg, mask, valueShifted);
-
-        // 寫完立刻回讀，讓 UI 與暫存器一致
-        TryRefreshFromRegister();
-
-        System.Diagnostics.Debug.WriteLine($"[GrayReverse] Set OK: Axis={Axis}, Enable={Enable}");
-    }
+private void TryRefreshFromRegister()
+{
+    try { RefreshFromRegister(); }
     catch (Exception ex)
     {
-        System.Diagnostics.Debug.WriteLine("[GrayReverse] Write failed: " + ex.Message);
+        System.Diagnostics.Debug.WriteLine("[GrayReverse] Skip refresh: " + ex.Message);
     }
 }
