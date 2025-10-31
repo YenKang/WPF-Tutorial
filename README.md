@@ -1,40 +1,37 @@
-private static int Clamp(int v, int min, int max)
+public void Apply()
 {
-    if (v < min) return min;
-    if (v > max) return max;
-    return v;
-}
+    if (Total <= 0) return;
 
-private static byte ParseHexByte(string s, byte fallback)
-{
-    if (string.IsNullOrWhiteSpace(s)) return fallback;
-    s = s.Trim();
-    if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
-    byte b;
-    return byte.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out b) ? b : fallback;
-}
+    // Step 1: TOTAL（硬體 0 = 1 張）
+    if (!string.IsNullOrEmpty(_totalTarget))
+    {
+        var encoded = Math.Max(0, Total - 1) & 0x1F;
+        RegMap.Write8(_totalTarget, (byte)encoded);
+    }
 
-private static int ParseHex(string s, int fallback)
-{
-    if (string.IsNullOrWhiteSpace(s)) return fallback;
-    s = s.Trim();
-    if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)) s = s.Substring(2);
-    int v;
-    return int.TryParse(s, System.Globalization.NumberStyles.HexNumber, null, out v) ? v : fallback;
-}
+    // Step 2: ORD0..（只寫到 Orders 現有數量或 JSON targets 陣列數量上限）
+    var count = Math.Min(Total, _orderTargets.Length);
+    for (int i = 0; i < count; i++)
+    {
+        var target = _orderTargets[i];
+        if (string.IsNullOrEmpty(target)) continue;
 
-private void UnpackFcnt1ToUI(int value10)
-{
-    value10 &= 0x3FF;
-    FCNT1_D2 = (value10 >> 8) & 0x3;  // 2 bits
-    FCNT1_D1 = (value10 >> 4) & 0xF;  // 4 bits
-    FCNT1_D0 = (value10 >> 0) & 0xF;  // 4 bits
-}
+        byte code = (byte)(Orders[i].SelectedIndex & 0x3F);
+        RegMap.Write8(target, code);
+    }
 
-private int PackFcnt1FromUI()
-{
-    var d2 = FCNT1_D2 & 0x3;
-    var d1 = FCNT1_D1 & 0xF;
-    var d0 = FCNT1_D0 & 0xF;
-    return ((d2 << 8) | (d1 << 4) | d0) & 0x3FF;
+    // Step 2.5: FCNT1（需先在 LoadFrom 解析 mapping）
+    int f1Val = PackFcnt1FromUI(); // 10-bit
+    WriteFcnt(_fc1LowTarget, _fc1HighTarget, _fc1Mask, _fc1Shift, f1Val);
+
+    // Step 3: 觸發 Auto-Run（若有）
+    if (!string.IsNullOrEmpty(_triggerTarget))
+        RegMap.Write8(_triggerTarget, _triggerValue);
+
+    // Step 4: 存 Cache（Total, Orders, FCNT1）
+    var orderIdx = new List<int>(Orders.Count);
+    for (int i = 0; i < Orders.Count; i++) orderIdx.Add(Orders[i].SelectedIndex);
+    AutoRunCache.Save(Total, orderIdx, f1Val);
+
+    System.Diagnostics.Debug.WriteLine("[AutoRun] Apply done. Cache updated.");
 }
