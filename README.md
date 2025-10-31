@@ -354,3 +354,4 @@ namespace BistMode.ViewModels
         }
     }
 }
+
