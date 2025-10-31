@@ -1,37 +1,23 @@
-private void ResizeOrders(int desiredCount)
+// C# 7.3 相容
+namespace BistMode.ViewModels
 {
-    // 合法化目標數量
-    desiredCount = Clamp(desiredCount, 1, 22);
-
-    // 記下擴編前的數量
-    int oldCount = Orders.Count;
-
-    _isHydrating = true;
-    try
+    public static class LineExclamCache
     {
-        // 1) 若數量不足 → 逐一補上
-        while (Orders.Count < desiredCount)
-        {
-            int slot = Orders.Count;                // 0-based slot
-            int idx  = CoercePatternIndex(slot);    // 需求：用 slot 番號 0,1,2,3… 補齊
+        public static bool HasMemory { get; private set; }
+        public static bool WhiteBg { get; private set; } // true=白底, false=黑底
 
-            Orders.Add(new OrderSlot
-            {
-                DisplayNo     = slot + 1,           // 顯示用 1-based
-                SelectedIndex = idx
-            });
+        public static void Save(bool whiteBg)
+        {
+            WhiteBg = whiteBg;
+            HasMemory = true;
         }
 
-        // 2) 若數量過多 → 刪除尾端
-        while (Orders.Count > desiredCount)
-            Orders.RemoveAt(Orders.Count - 1);
-
-        // 3) 重新編排顯示用序號（不影響 SelectedIndex）
-        for (int i = 0; i < Orders.Count; i++)
-            Orders[i].DisplayNo = i + 1;
-    }
-    finally
-    {
-        _isHydrating = false;
+        public static void Clear()
+        {
+            HasMemory = false;
+            WhiteBg = false; // 回到預設：不勾(黑底)
+        }
     }
 }
+
+＝＝＝＝＝
