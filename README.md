@@ -1,23 +1,18 @@
-/// <summary>
-/// 將目前 AutoRun 狀態儲存到快取。
-/// </summary>
-/// <param name="total">目前的 Pattern Total。</param>
-/// <param name="orderIndices">每個 Order 的圖樣索引。</param>
-/// <param name="fcnt1">目前 FCNT1 的 10-bit 整值。</param>
-public static void Save(int total, IEnumerable<int> orderIndices, int fcnt1)
-{
-    // 1️⃣ 安全檢查
-    if (total < 0)
-        total = 0;
+private void RestoreFromCache()
+    {
+        _isHydrating = true;
+        try
+        {
+            // 回填 Total 與 Orders
+            Total = Clamp(AutoRunCache.Total, TotalMinDefault, TotalMaxDefault);
+            ResizeOrders(Total);
 
-    if (orderIndices == null)
-        orderIndices = Array.Empty<int>();
+            for (int i = 0; i < Orders.Count && i < AutoRunCache.OrderIndices.Length; i++)
+                Orders[i].SelectedIndex = CoercePatternIndex(AutoRunCache.OrderIndices[i]);
 
-    // 2️⃣ 賦值（清楚分區）
-    Total        = total;
-    OrderIndices = orderIndices.ToArray();
-    Fcnt1        = fcnt1;
-
-    // 3️⃣ 標記記憶狀態
-    HasMemory    = true;
-}
+            // 回填 FCNT1（若有）
+            UnpackFcnt1ToUI(AutoRunCache.Fcnt1);
+        }
+        finally
+        {
+            _isHydrating = false;
