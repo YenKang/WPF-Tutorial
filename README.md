@@ -1,21 +1,16 @@
-// ---------- FCNT2 ----------
-var f2 = autoRunControl["fcnt2"] as JObject;
-_fc2Default = ParseHex((string)f2?["default"], 0x01E);  // 預設 0x01E
-
-if (f2?["targets"] is JObject t2)
+// 將 UI 的 D2/D1/D0 打包成 10-bit
+private int PackFcnt2FromUI()
 {
-    _fc2LowTarget  = (string)t2["low"];
-    _fc2HighTarget = (string)t2["high"];
-    _fc2Mask       = ParseHexByte((string)t2["mask"], 0x0C);
-    _fc2Shift      = (int?)t2["shift"] ?? 10;
+    int d2 = Clamp(FCNT2_D2, 0, 3);
+    int d1 = Clamp(FCNT2_D1, 0, 15);
+    int d0 = Clamp(FCNT2_D0, 0, 15);
+    return (d2 << 8) | (d1 << 4) | d0;
 }
 
-// 將值展開到 UI：先看快取，沒有就吃 JSON default
-if (AutoRunCache.HasMemory)
+// 將 10-bit 展開到 UI 的 D2/D1/D0
+private void UnpackFcnt2ToUI(int value10)
 {
-    UnpackFcnt2ToUI(AutoRunCache.Fcnt2);
-}
-else
-{
-    UnpackFcnt2ToUI(_fc2Default);
+    FCNT2_D2 = (value10 >> 8) & 0x03;   // [9:8]
+    FCNT2_D1 = (value10 >> 4) & 0x0F;   // [7:4]
+    FCNT2_D0 = (value10 >> 0) & 0x0F;   // [3:0]
 }
