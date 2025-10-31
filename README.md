@@ -1,14 +1,12 @@
-private void RestoreFromCache()
+private void ResizeOrders(int desiredCount)
 {
-    // Total + Orders
-    Total = Clamp(AutoRunCache.Total, 1, 22);
-    ResizeOrders(Total);
+    desiredCount = Clamp(desiredCount, 1, 22);
+    while (Orders.Count < desiredCount)
+        Orders.Add(new OrderSlot { DisplayNo = Orders.Count + 1, SelectedIndex = 0 });
+
+    while (Orders.Count > desiredCount)
+        Orders.RemoveAt(Orders.Count - 1);
 
     for (int i = 0; i < Orders.Count; i++)
-        Orders[i].SelectedIndex = AutoRunCache.Orders != null && i < AutoRunCache.Orders.Length
-            ? (AutoRunCache.Orders[i] & 0x3F)
-            : 0;
-
-    // FCNT1
-    UnpackFcnt1ToUI(AutoRunCache.Fcnt1);
+        Orders[i].DisplayNo = i + 1;
 }
