@@ -1,37 +1,31 @@
-<DataGrid ItemsSource="{Binding Osds}"
-          AutoGenerateColumns="False"
-          CanUserAddRows="False">
-  <DataGrid.Columns>
-    <!-- OSD 名稱 -->
-    <DataGridTextColumn Header="OSD"
-                        Binding="{Binding OsdName}"
-                        IsReadOnly="True" Width="110"/>
+using System.Collections.Generic;
+using System.Windows;
+using OSDIconFlashMap.Model;
+using OSDIconFlashMap.ViewModel;
 
-    <!-- Icon 下拉 -->
-    <DataGridTemplateColumn Header="Icon" Width="200">
-      <DataGridTemplateColumn.CellTemplate>
-        <DataTemplate>
-          <ComboBox ItemsSource="{Binding DataContext.Icons, RelativeSource={RelativeSource AncestorType=Window}}"
-                    SelectedItem="{Binding SelectedIcon, Mode=TwoWay}"
-                    DisplayMemberPath="Name" Width="180"/>
-        </DataTemplate>
-      </DataGridTemplateColumn.CellTemplate>
-    </DataGridTemplateColumn>
+namespace OSDIconFlashMap.View
+{
+    public partial class IconFlashMapWindow : Window
+    {
+        private readonly IconFlashMapViewModel _vm;
 
-    <!-- Icon 縮圖（獨立一欄） -->
-    <DataGridTemplateColumn Header="Icon 縮圖" Width="120">
-      <DataGridTemplateColumn.CellTemplate>
-        <DataTemplate>
-          <Image Width="36" Height="36"
-                 HorizontalAlignment="Center" VerticalAlignment="Center"
-                 Source="{Binding SelectedIcon.Thumbnail}" />
-        </DataTemplate>
-      </DataGridTemplateColumn.CellTemplate>
-    </DataGridTemplateColumn>
+        public IconFlashMapWindow()
+        {
+            InitializeComponent();
 
-    <!-- Flash address（獨立一欄） -->
-    <DataGridTextColumn Header="Flash address (0xAAAAAA)"
-                        Binding="{Binding SelectedIcon.FlashStartHex}"
-                        Width="*" />
-  </DataGrid.Columns>
-</DataGrid>
+            // 初始化 ViewModel
+            _vm = new IconFlashMapViewModel();
+
+            // 掛上資料上下文
+            this.DataContext = _vm;
+        }
+
+        /// <summary>
+        /// 外部可呼叫此方法，把舊畫面的 icon 列表 (IconModel) 傳進來。
+        /// </summary>
+        public void LoadCatalog(IEnumerable<IconModel> icons)
+        {
+            _vm.LoadCatalog(icons);
+        }
+    }
+}
