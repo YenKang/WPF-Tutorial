@@ -1,21 +1,26 @@
-// Model/IconModel.cs
-using System.Drawing;                 // 可選：如果你會帶 RawBitmap
-using System.Windows.Media;           // ImageSource
-// using System.Windows.Media.Imaging; // 若你也會用 BitmapImage 可保留
+using OSDIconFlashMap.Model;
+using OSDIconFlashMap.View;
 
-namespace OSDIconFlashMap.Model
+private void OpenIconFlashMapTool_Click(object sender, RoutedEventArgs e)
 {
-    public class IconModel
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }              // "icon_1"
-        public ulong FlashStart { get; set; }         // 數值位址
-        public string FlashStartHex => $"0x{FlashStart:X}";
+    var icons = new List<IconModel>();
 
-        // 供 UI 綁定顯示（直接用你現有的轉換結果）
-        public ImageSource Thumbnail { get; set; }
+    // 假設你這裡手上就有前人流程產生的 Bitmap 與 address
+    // (bmp1, bmp2, bmp3 只是示意，請換成你實際的變數)
+    icons.Add(new IconModel{
+        Id = 1, Name = "icon_1", FlashStart = 0x18000,
+        Thumbnail = ShowUImg(bmp1),     // 直接吃你現有方法的回傳值
+        RawBitmap = bmp1                // 可選
+    });
+    icons.Add(new IconModel{
+        Id = 2, Name = "icon_2", FlashStart = 0x18222,
+        Thumbnail = ShowUImg(bmp2),
+        RawBitmap = bmp2
+    });
+    // … 依序加入
 
-        // 可選：如果你仍要保存原始 Bitmap 做其他計算
-        public Bitmap RawBitmap { get; set; }
-    }
+    var win = new IconFlashMapWindow();
+    win.LoadCatalog(icons);
+    win.Owner = this;
+    win.Show();
 }
