@@ -4,32 +4,27 @@ namespace OSDIconFlashMap.Model
 {
     public class OsdModel : ViewModelBase
     {
-        // "OSD_1" ~ "OSD_40"
-        public string OsdName { get; set; }
+        public string OsdName { get; set; }   // "OSD_1".."OSD_40"
 
-        // 綁 ICON 下拉的選項
+        private IconModel _selectedIcon;
         public IconModel SelectedIcon
         {
-            get => GetValue<IconModel>();
+            get => _selectedIcon;
             set
             {
-                if (SetValue(value))
-                {
-                    // 當 ICON 改變，手動通知衍生屬性刷新
-                    Raise(nameof(ThumbnailKey));
-                    Raise(nameof(FlashStartAddrHex));
-                }
+                if (ReferenceEquals(_selectedIcon, value)) return;
+                _selectedIcon = value;
+
+                // 1) 本身屬性
+                RaisePropertyChanged(nameof(SelectedIcon));
+                // 2) 衍生屬性（畫面綁這兩個 → 會即時刷新）
+                RaisePropertyChanged(nameof(ThumbnailKey));
+                RaisePropertyChanged(nameof(FlashStartAddrHex));
             }
         }
 
-        // 綁定到畫面用的衍生屬性（隨 SelectedIcon 改變）
-        public string ThumbnailKey      => SelectedIcon?.ThumbnailKey   ?? "(待載入)";
-        public string FlashStartAddrHex => SelectedIcon?.FlashStartHex  ?? "0x000000";
-
-        // 封裝通知方法（依你的 ViewModelBase 版本調整）
-        private void Raise(string name)
-        {
-            RaisePropertyChanged(name); // 若你的 base 類叫 OnPropertyChanged(name)，就換成那個
-        }
+        // 綁這兩個，不要再綁 SelectedIcon.*
+        public string ThumbnailKey       => SelectedIcon?.ThumbnailKey  ?? "(待載入)";
+        public string FlashStartAddrHex  => SelectedIcon?.FlashStartHex ?? "0x000000";
     }
 }
