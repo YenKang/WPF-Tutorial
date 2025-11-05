@@ -1,32 +1,72 @@
-// 需要這兩個 using
-using OSDIconFlashMap.Model;   // IconModel
-using OSDIconFlashMap.View;    // IconFlashMapWindow
+<Window x:Class="OSDIconFlashMap.View.IconFlashMapWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="OSD Icon Flash Map" Height="620" Width="860">
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
 
-private void OpenIconFlashMapTool_Click(object sender, RoutedEventArgs e)
-{
-    // 假資料：icon_1 ~ icon_12，地址從 0x18000 起，每個間隔 0x02222（只是示意）
-    const ulong baseAddr = 0x18000;
-    const int   count    = 12;
+    <!-- 頂部工具列：IC Select -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="12,8,12,4">
+      <TextBlock Text="IC Select" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="Bold"/>
+      <ComboBox Width="160"
+                ItemsSource="{Binding IcOptions}"
+                SelectedItem="{Binding SelectedIc, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+      <!-- 需要時可放更多控制項 -->
+    </StackPanel>
 
-    var icons = new List<IconModel>();
-    for (int i = 1; i <= count; i++)
-    {
-        icons.Add(new IconModel
-        {
-            Id           = i,
-            Name         = $"icon_{i}",
-            FlashStart   = baseAddr + (ulong)((i - 1) * 0x2222),
-            // 先不載入圖片，只放規則鍵名：iconN → iconN_thumbnail
-            ThumbnailKey = $"icon_{i}_thumbnail"
-        });
-    }
+    <!-- 主表格 -->
+    <DataGrid Grid.Row="1"
+              ItemsSource="{Binding Osds}"
+              AutoGenerateColumns="False"
+              CanUserAddRows="False"
+              RowHeaderWidth="0"
+              HeadersVisibility="Column"
+              GridLinesVisibility="None"
+              ColumnHeaderHeight="32"
+              Margin="12,0,12,12">
+      <DataGrid.Columns>
+        <!-- 1) OSD -->
+        <DataGridTextColumn Header="OSD" Width="100" IsReadOnly="True" Binding="{Binding OsdName}" />
 
-    var win = new IconFlashMapWindow();
-    win.LoadCatalog(icons);
+        <!-- 2) ICON（可選） -->
+        <DataGridTemplateColumn Header="ICON" Width="220">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <ComboBox ItemsSource="{Binding DataContext.Icons, RelativeSource={RelativeSource AncestorType=Window}}"
+                        SelectedItem="{Binding SelectedIcon, Mode=TwoWay}"
+                        DisplayMemberPath="Name" Width="200"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
 
-    // 如果這個 method 不在 Window 類別內，用這招安全帶 Owner
-    var owner = System.Windows.Window.GetWindow(this as System.Windows.DependencyObject);
-    if (owner != null) win.Owner = owner;
+        <!-- 3) Icon 縮圖（目前顯示鍵名/占位） -->
+        <DataGridTemplateColumn Header="ICON 縮圖" Width="160">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding SelectedIcon.ThumbnailKey}"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Foreground="#666" FontStyle="Italic"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
 
-    win.Show();
-}
+        <!-- 4) Flash address -->
+        <DataGridTextColumn Header="FLASH ADDRESS (0xAAAAAA)" Width="*">
+          <DataGridTextColumn.ElementStyle>
+            <Style TargetType="TextBlock">
+              <Setter Property="Text" Value="{Binding SelectedIcon.FlashStartHex}"/>
+              <Setter Property="VerticalAlignment" Value="Center"/>
+              <Setter Property="TextAlignment" Value="Right"/>
+              <Setter Property="Margin" Value="0,0,12,0"/>
+              <Setter Property="FontFamily" Value="Consolas"/>
+            </Style>
+          </DataGridTextColumn.ElementStyle>
+        </DataGridTextColumn>
+
+      </DataGrid.Columns>
+    </DataGrid>
+  </Grid>
+</Window>
