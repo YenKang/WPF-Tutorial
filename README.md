@@ -1,31 +1,17 @@
-using System.Collections.Generic;
-using System.Windows;
 using OSDIconFlashMap.Model;
-using OSDIconFlashMap.ViewModel;
+using OSDIconFlashMap.View;
+using System.Collections.Generic;
 
-namespace OSDIconFlashMap.View
+private void OpenIconFlashMapTool_Click(object sender, RoutedEventArgs e)
 {
-    public partial class IconFlashMapWindow : Window
+    var icons = new List<IconModel>
     {
-        private readonly IconFlashMapViewModel _vm;
+        new IconModel{ Id=1, Name="icon_1", FlashStart=0x18000 },
+        new IconModel{ Id=2, Name="icon_2", FlashStart=0x18222 },
+        new IconModel{ Id=3, Name="icon_3", FlashStart=0x18880 },
+    };
 
-        public IconFlashMapWindow()
-        {
-            InitializeComponent();
-
-            // 初始化 ViewModel
-            _vm = new IconFlashMapViewModel();
-
-            // 掛上資料上下文
-            this.DataContext = _vm;
-        }
-
-        /// <summary>
-        /// 外部可呼叫此方法，把舊畫面的 icon 列表 (IconModel) 傳進來。
-        /// </summary>
-        public void LoadCatalog(IEnumerable<IconModel> icons)
-        {
-            _vm.LoadCatalog(icons);
-        }
-    }
+    var win = new IconFlashMapWindow();
+    win.LoadCatalog(icons);
+    win.Show();
 }
