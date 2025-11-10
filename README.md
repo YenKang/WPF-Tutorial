@@ -1,65 +1,60 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
-using OSDIconFlashMap.Model;
-using Utility.MVVM;
+<Window x:Class="OSDIconFlashMap.View.IconToImageMapWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:OSDIconFlashMap.ViewModel"
+        Title="Icon → Image Selection" Width="900" Height="640"
+        WindowStartupLocation="CenterOwner">
+  <Window.DataContext>
+    <vm:IconToImageMapViewModel/>
+  </Window.DataContext>
 
-namespace OSDIconFlashMap.ViewModel
-{
-    public class IconToImageMapViewModel : ViewModelBase
-    {
-        public ObservableCollection<IconSlotModel> IconSlots { get; } = new();
-        public ObservableCollection<ImageOption>   Images    { get; } = new();
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
 
-        // 固定 NT51726：30 列
-        public void InitIconSlots()
-        {
-            IconSlots.Clear();
-            for (int i = 1; i <= 30; i++)
-                IconSlots.Add(new IconSlotModel { IconIndex = i });
-            RaisePropertyChanged(nameof(IconSlots));
-        }
+    <!-- 表頭 -->
+    <DockPanel Grid.Row="0" Margin="0,0,0,8">
+      <TextBlock Text="Icon#" Width="120" FontWeight="Bold"/>
+      <TextBlock Text="Image Selection" Margin="16,0,0,0" FontWeight="Bold"/>
+    </DockPanel>
 
-        public void LoadImages(params ImageOption[] options)
-        {
-            Images.Clear();
-            foreach (var o in options) Images.Add(o);
-            RaisePropertyChanged(nameof(Images));
-        }
+    <!-- 主表 -->
+    <DataGrid Grid.Row="1"
+              ItemsSource="{Binding IconSlots}"
+              AutoGenerateColumns="False"
+              CanUserAddRows="False"
+              HeadersVisibility="None"
+              RowHeaderWidth="0"
+              RowHeight="44"
+              GridLinesVisibility="None">
+      <DataGrid.Columns>
 
-        // 從資料夾載入（僅取 7 張）
-        public void LoadImagesFromFolder(string relativeFolder)
-        {
-            // 以執行檔資料夾為基準
-            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            var folder  = Path.Combine(baseDir, relativeFolder);
+        <!-- 左：Icon# -->
+        <DataGridTemplateColumn Width="120">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Border Padding="8" BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">
+                <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}"
+                           VerticalAlignment="Center"/>
+              </Border>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
 
-            if (!Directory.Exists(folder))
-                return;
+        <!-- 右：Image Selection（按鈕→圖片牆） -->
+        <DataGridTemplateColumn Width="*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <Button Content="{Binding SelectedImageName}"
+                      HorizontalAlignment="Stretch" Padding="10,6"
+                      Click="OpenPicker_Click"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
 
-            var filePatterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp" };
-            var files = filePatterns.SelectMany(p => Directory.GetFiles(folder, p))
-                                    .Take(7) // 只取 7 張
-                                    .ToList();
-
-            var list = new List<ImageOption>();
-            int id = 1;
-            foreach (var path in files)
-            {
-                var name = Path.GetFileNameWithoutExtension(path);
-                list.Add(new ImageOption
-                {
-                    Id = id++,
-                    Name = name,
-                    Key  = name,
-                    ThumbnailKey = $"{name}_thumbnail",
-                    ImagePath = path
-                });
-            }
-
-            LoadImages(list.ToArray());
-        }
-    }
-}
+      </DataGrid.Columns>
+    </DataGrid>
+  </Grid>
+</Window>
