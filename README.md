@@ -14,7 +14,7 @@ namespace OSDIconFlashMap.View
         public ImagePickerWindow(IEnumerable<ImageOption> options)
         {
             InitializeComponent();
-            _all = options?.ToList() ?? new();
+            _all = options?.ToList() ?? new List<ImageOption>();
             ic.ItemsSource = _all;
         }
 
