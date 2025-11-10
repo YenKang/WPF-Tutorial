@@ -1,45 +1,16 @@
-public class IconSlotModel : ViewModelBase
+private void OpenPicker_Click(object sender, RoutedEventArgs e)
 {
-    /// <summary>
-    /// Icon 序號 (1~30)
-    /// </summary>
-    public int IconIndex { get; set; }
+    if ((sender as FrameworkElement)?.DataContext is not IconSlotModel row) return;
 
-    private ImageOption _selectedImage;
+    var vm = (IconToImageMapViewModel)DataContext;
+    var picker = new ImagePickerWindow(vm.Images) { Owner = this };
 
-    /// <summary>
-    /// 使用者目前選取的圖片
-    /// </summary>
-    public ImageOption SelectedImage
+    if (picker.ShowDialog() == true)
     {
-        get { return _selectedImage; }
-        set
-        {
-            // 1️⃣ 若值相同，不做多餘動作
-            if (Equals(_selectedImage, value))
-                return;
+        // 寫回 Row → 觸發第 1 步的 Raise
+        row.SelectedImage = picker.Selected;
 
-            // 2️⃣ 更新 backing field
-            _selectedImage = value;
-
-            // 3️⃣ 通知屬性改變
-            RaisePropertyChanged(nameof(SelectedImage));
-
-            // 4️⃣ 讓 UI 知道依附顯示文字也要重繪
-            RaisePropertyChanged(nameof(SelectedImageName));
-        }
-    }
-
-    /// <summary>
-    /// 顯示用名稱（綁定在表格按鈕上）
-    /// </summary>
-    public string SelectedImageName
-    {
-        get
-        {
-            if (_selectedImage == null)
-                return "(未選擇)";
-            return _selectedImage.Name;
-        }
+        // 臨時偵錯：確認實際寫進去的是誰
+        System.Diagnostics.Debug.WriteLine($"Row {row.IconIndex} => {row.SelectedImage?.Name}");
     }
 }
