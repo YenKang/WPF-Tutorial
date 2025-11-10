@@ -1,30 +1,10 @@
-using System.Windows;
-using System.Windows.Controls;
-using OSDIconFlashMap.Model;
-using OSDIconFlashMap.ViewModel;
-
-namespace OSDIconFlashMap.View
-{
-    public partial class IconToImageMapWindow : Window
-    {
-        public IconToImageMapWindow()
-        {
-            InitializeComponent();
-
-            var vm = (IconToImageMapViewModel)DataContext;
-            vm.InitIconSlots();
-            vm.LoadImagesFromFolder(@"Assets\TestIcons"); // ← 7 張測試圖
-        }
-
-        private void OpenPicker_Click(object sender, RoutedEventArgs e)
-        {
-            if ((sender as FrameworkElement)?.DataContext is not IconSlotModel row) return;
-
-            var vm = (IconToImageMapViewModel)DataContext;
-            var picker = new ImagePickerWindow(vm.Images) { Owner = this };
-
-            if (picker.ShowDialog() == true)
-                row.SelectedImage = picker.Selected; // 回寫顯示名稱
-        }
-    }
-}
+<Window x:Class="OSDIconFlashMap.View.IconToImageMapWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:OSDIconFlashMap.ViewModel"
+        ...>
+  <Window.DataContext>
+    <vm:IconToImageMapViewModel/>
+  </Window.DataContext>
+  ...
+</Window>
