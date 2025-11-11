@@ -1,24 +1,36 @@
-private void OpenPicker_Click(object sender, RoutedEventArgs e)
+public partial class ImagePickerWindow : Window
 {
-    var fe = sender as FrameworkElement;
-    if (fe == null) return;
+    private readonly List<ImageOption> _all;
+    public ImageOption Selected { get; private set; }
 
-    var row = fe.DataContext as IconSlotModel;
-    if (row == null) return;
+    public ImagePickerWindow(IEnumerable<ImageOption> options, string preSelectedKey, ISet<string> usedKeys)
+    {
+        InitializeComponent();
 
-    var vm = (IconToImageMapViewModel)DataContext;
+        _all = options != null ? options.ToList() : new List<ImageOption>();
 
-    // 這一列上次選的 Key（用來標黃、預選）
-    var preKey = row.SelectedImage != null ? row.SelectedImage.Key : null;
+        // 標記「本列上次選過」與「其他列已使用」
+        foreach (var img in _all)
+        {
+            img.IsPreviouslySelected = (preSelectedKey != null && img.Key == preSelectedKey);
+            img.IsUsedByOthers = (usedKeys != null && usedKeys.Contains(img.Key));
+            img.IsCurrentSelected = false;
+        }
 
-    // 其他列已經使用過的 Key（用來打開圖片牆就標示）
-    var usedKeys = vm.IconSlots
-                     .Where(s => !object.ReferenceEquals(s, row) && s.SelectedImage != null)
-                     .Select(s => s.SelectedImage.Key)
-                     .ToHashSet();
+        // 預選中（讓它一進來就藍框）
+        if (!string.IsNullOrEmpty(preSelectedKey))
+        {
+            var hit = _all.FirstOrDefault(x => x.Key == preSelectedKey);
+            if (hit != null)
+            {
+                hit.IsCurrentSelected = true;
+                Selected = hit;
+            }
+        }
 
-    var picker = new ImagePickerWindow(vm.Images, preKey, usedKeys) { Owner = this };
+        ic.ItemsSource = _all;
+        PreviewKeyDown += ImagePickerWindow_PreviewKeyDown;
+    }
 
-    if (picker.ShowDialog() == true && picker.Selected != null)
-        row.SelectedImage = picker.Selected;
+    // 其餘 OnPick / Enter / Esc 寫法維持你現有版本
 }
