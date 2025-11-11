@@ -1,71 +1,58 @@
-<Window x:Class="OSDIconFlashMap.View.IconToImageMapWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Icon → Image Selection"
-        Width="900" Height="620"
-        WindowStartupLocation="CenterOwner">
+using System;
+using System.IO;
+using System.Windows;
+using OSDIconFlashMap.ViewModel;
 
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>   <!-- 工具列 -->
-            <RowDefinition Height="*"/>      <!-- 主表格 -->
-        </Grid.RowDefinitions>
+namespace OSDIconFlashMap.View
+{
+    public partial class IconToImageMapWindow : Window
+    {
+        private IconToImageMapViewModel _vm;
 
-        <!-- ✅ 工具列：Save / Load INI -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,8">
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
-                <Button Content="Save INI" Margin="0,0,8,0" Padding="10,4" Click="OnSaveIni"/>
-                <Button Content="Load INI"               Padding="10,4" Click="OnLoadIni"/>
-            </StackPanel>
+        public IconToImageMapWindow()
+        {
+            InitializeComponent();
 
-            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                <TextBlock Text="Icon#" Width="120" FontWeight="Bold"/>
-                <TextBlock Text="Image Selection" Margin="16,0,0,0" FontWeight="Bold"/>
-            </StackPanel>
-        </DockPanel>
+            // 建立 ViewModel
+            _vm = new IconToImageMapViewModel();
 
-        <!-- ✅ 主表格 -->
-        <DataGrid Grid.Row="1"
-                  ItemsSource="{Binding IconSlots}"
-                  AutoGenerateColumns="False"
-                  HeadersVisibility="None"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  CanUserResizeRows="False"
-                  IsReadOnly="True"
-                  GridLinesVisibility="None"
-                  RowHeight="36">
+            // 綁定資料上下文
+            this.DataContext = _vm;
 
-            <DataGrid.Columns>
-                <!-- 左欄：Icon# -->
-                <DataGridTemplateColumn Width="120">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Border Padding="8"
-                                    BorderBrush="#DDD"
-                                    BorderThickness="1"
-                                    CornerRadius="4"
-                                    Margin="0,0,8,0">
-                                <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Center"/>
-                            </Border>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+            // 載入假圖資料
+            string imageFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "TestIcons");
+            _vm.LoadImagesFromFolder(imageFolder);
+        }
 
-                <!-- 右欄：Image Selection（按鈕） -->
-                <DataGridTemplateColumn Width="250">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button Content="{Binding SelectedImageName, Mode=OneWay}"
-                                    HorizontalAlignment="Stretch"
-                                    Padding="10,6"
-                                    Click="OnOpenPickerClick"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
-    </Grid>
-</Window>
+        // ---- 以下保持你原本的事件（例如 OnSaveIni / OnLoadIni） ----
+        private void OnSaveIni(object sender, RoutedEventArgs e)
+        {
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "INI files (*.ini)|*.ini|All files (*.*)|*.*",
+                FileName = "ImageMapConfig.ini"
+            };
+            if (dlg.ShowDialog(this) == true)
+            {
+                _vm.SaveToIni(dlg.FileName);
+                MessageBox.Show("Saved successfully.", "INI");
+            }
+        }
+
+        private void OnLoadIni(object sender, RoutedEventArgs e)
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "INI files (*.ini)|*.ini|All files (*.*)|*.*",
+                FileName = "ImageMapConfig.ini"
+            };
+            if (dlg.ShowDialog(this) == true)
+            {
+                _vm.LoadFromIni(dlg.FileName);
+                MessageBox.Show("Loaded successfully.", "INI");
+            }
+        }
+
+        // 若你有開啟圖片牆的事件 OnOpenPickerClick() 也放在這裡。
+    }
+}
