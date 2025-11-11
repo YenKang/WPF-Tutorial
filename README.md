@@ -41,23 +41,13 @@ namespace OSDIconFlashMap.Util
         public static void WriteSections(string path, Dictionary<string, Dictionary<string, string>> data)
         {
             var sb = new StringBuilder();
-
-            if (data.ContainsKey("Meta"))
-            {
-                sb.AppendLine("[Meta]");
-                foreach (var kv in data["Meta"])
-                    sb.AppendLine($"{kv.Key}={kv.Value}");
-                sb.AppendLine();
-            }
-
-            foreach (var sec in data.Keys.Where(k => !string.Equals(k, "Meta", StringComparison.OrdinalIgnoreCase)))
+            foreach (var sec in data.Keys)
             {
                 sb.AppendLine($"[{sec}]");
-                foreach (var kv in data[sec].OrderBy(kv => kv.Key))
+                foreach (var kv in data[sec].OrderBy(k => k.Key))
                     sb.AppendLine($"{kv.Key}={kv.Value}");
                 sb.AppendLine();
             }
-
             File.WriteAllText(path, sb.ToString());
         }
     }
