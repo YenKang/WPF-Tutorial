@@ -1,36 +1,20 @@
-public partial class ImagePickerWindow : Window
-{
-    private readonly List<ImageOption> _all;
-    public ImageOption Selected { get; private set; }
+<Border ...>  <!-- 你的邊框與樣式同前，省略 -->
+  <Grid>
+    <!-- 圖片 + 名稱 -->
+    <StackPanel>
+      <Image Source="{Binding ImagePath}" Height="90" Stretch="UniformToFill"/>
+      <TextBlock Text="{Binding Name}" Margin="0,6,0,0" HorizontalAlignment="Center"
+                 TextTrimming="CharacterEllipsis"/>
+    </StackPanel>
 
-    public ImagePickerWindow(IEnumerable<ImageOption> options, string preSelectedKey, ISet<string> usedKeys)
-    {
-        InitializeComponent();
-
-        _all = options != null ? options.ToList() : new List<ImageOption>();
-
-        // 標記「本列上次選過」與「其他列已使用」
-        foreach (var img in _all)
-        {
-            img.IsPreviouslySelected = (preSelectedKey != null && img.Key == preSelectedKey);
-            img.IsUsedByOthers = (usedKeys != null && usedKeys.Contains(img.Key));
-            img.IsCurrentSelected = false;
-        }
-
-        // 預選中（讓它一進來就藍框）
-        if (!string.IsNullOrEmpty(preSelectedKey))
-        {
-            var hit = _all.FirstOrDefault(x => x.Key == preSelectedKey);
-            if (hit != null)
-            {
-                hit.IsCurrentSelected = true;
-                Selected = hit;
-            }
-        }
-
-        ic.ItemsSource = _all;
-        PreviewKeyDown += ImagePickerWindow_PreviewKeyDown;
-    }
-
-    // 其餘 OnPick / Enter / Esc 寫法維持你現有版本
-}
+    <!-- 右上角：已被使用角標（仍可選） -->
+    <Border Background="#FFE8B5" CornerRadius="3"
+            HorizontalAlignment="Right" VerticalAlignment="Top"
+            Margin="0,0,4,0" Padding="4,1" Visibility="Collapsed">
+      <Border.Visibility>
+        <Binding Path="IsUsedByOthers" Converter="{StaticResource BoolToVisibilityConverter}"/>
+      </Border.Visibility>
+      <TextBlock Text="已被使用" FontSize="10" Foreground="#7A4B00"/>
+    </Border>
+  </Grid>
+</Border>
