@@ -1,47 +1,107 @@
-// View/ImagePickerWindow.xaml.cs
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
-using System.Windows.Input;
-using OSDIconFlashMap.Model;
+<Window x:Class="OSDIconFlashMap.View.ImagePickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Select Image"
+        Width="720"
+        Height="550"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
 
-public partial class ImagePickerWindow : Window
-{
-    private readonly List<ImageOption> _all;
-    public ImageOption Selected { get; private set; }
+    <DockPanel Margin="12">
 
-    public ImagePickerWindow(IEnumerable<ImageOption> options, string preSelectedKey, ISet<string> usedKeys)
-    {
-        InitializeComponent();
-        _all = options != null ? options.ToList() : new List<ImageOption>();
+        <!-- 標題列 -->
+        <TextBlock DockPanel.Dock="Top"
+                   Text="Select Image"
+                   FontWeight="Bold"
+                   FontSize="16"
+                   Margin="0,0,0,8"/>
 
-        foreach (var img in _all)
-        {
-            img.IsPreviouslySelected = (preSelectedKey != null && img.Key == preSelectedKey);
-            img.IsUsedByOthers       = (usedKeys != null && usedKeys.Contains(img.Key)); // ★
-            img.IsCurrentSelected    = false;
-        }
+        <!-- 主要圖片牆 -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="ic">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
 
-        if (!string.IsNullOrEmpty(preSelectedKey))
-        {
-            var hit = _all.FirstOrDefault(x => x.Key == preSelectedKey);
-            if (hit != null) { hit.IsCurrentSelected = true; Selected = hit; }
-        }
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="6"
+                                Padding="8"
+                                Width="160"
+                                Height="130"
+                                BorderThickness="1"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="OnPick">
 
-        ic.ItemsSource = _all;
-    }
+                            <!-- 邊框樣式控制 -->
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="#DDDDDD"/>
+                                    <Setter Property="Background" Value="#FFFFFF"/>
 
-    private void OnPick(object sender, MouseButtonEventArgs e)
-    {
-        var fe = sender as FrameworkElement;
-        var op = fe?.DataContext as ImageOption;
-        if (op == null) return;
+                                    <Style.Triggers>
 
-        for (int i = 0; i < _all.Count; i++) _all[i].IsCurrentSelected = false;
-        op.IsCurrentSelected = true;
-        Selected = op;
-        ic.Items.Refresh();
-        DialogResult = true;
-        Close();
-    }
-}
+                                        <!-- (1) 上次選過：黃框、淡黃底 -->
+                                        <DataTrigger Binding="{Binding IsPreviouslySelected}" Value="True">
+                                            <Setter Property="BorderBrush" Value="#FFD966"/>
+                                            <Setter Property="Background" Value="#FFFBEA"/>
+                                        </DataTrigger>
+
+                                        <!-- (2) 目前選中：藍框 -->
+                                        <DataTrigger Binding="{Binding IsCurrentSelected}" Value="True">
+                                            <Setter Property="BorderBrush" Value="#4A90E2"/>
+                                            <Setter Property="Background" Value="#EEF5FF"/>
+                                        </DataTrigger>
+
+                                        <!-- (3) 滑鼠移入：深灰框 -->
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="BorderBrush" Value="#999999"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+
+                            <!-- 內容區 -->
+                            <Grid>
+                                <StackPanel>
+                                    <Image Source="{Binding ImagePath}"
+                                           Height="90"
+                                           Stretch="UniformToFill"
+                                           Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding Name}"
+                                               FontSize="13"
+                                               HorizontalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+
+                                <!-- 右上角：已被其他列使用 -->
+                                <Border HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="0,0,4,0"
+                                        Padding="4,1"
+                                        CornerRadius="3">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Setter Property="Background" Value="#FFE8B5"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsUsedByOthers}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="已被使用"
+                                               FontSize="10"
+                                               Foreground="#7A4B00"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>
