@@ -1,107 +1,84 @@
-<Window x:Class="OSDIconFlashMap.View.ImagePickerWindow"
+<Window x:Class="OSDIconFlashMap.View.IconToImageMapWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Select Image"
-        Width="720"
-        Height="550"
-        WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
+        xmlns:vm="clr-namespace:OSDIconFlashMap.ViewModel"
+        Title="Icon → Image Selection"
+        Width="900" Height="620"
+        WindowStartupLocation="CenterOwner">
 
-    <DockPanel Margin="12">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <!-- 標題列 -->
-        <TextBlock DockPanel.Dock="Top"
-                   Text="Select Image"
-                   FontWeight="Bold"
-                   FontSize="16"
-                   Margin="0,0,0,8"/>
+        <!-- 工具列：IC Select + Save/Load -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,8">
 
-        <!-- 主要圖片牆 -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <ItemsControl x:Name="ic">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                <TextBlock Text="IC Select:" Margin="0,0,8,0" VerticalAlignment="Center" FontWeight="Bold"/>
+                <!-- 如果 VM 有 enum IcProfile { Primary, L1, L2, L3 } -->
+                <ComboBox Width="140"
+                          SelectedItem="{Binding SelectedProfile, Mode=TwoWay}"
+                          VerticalAlignment="Center">
+                    <ComboBox.ItemsSource>
+                        <x:Array Type="{x:Type vm:IcProfile}">
+                            <vm:IcProfile>Primary</vm:IcProfile>
+                            <vm:IcProfile>L1</vm:IcProfile>
+                            <vm:IcProfile>L2</vm:IcProfile>
+                            <vm:IcProfile>L3</vm:IcProfile>
+                        </x:Array>
+                    </ComboBox.ItemsSource>
+                </ComboBox>
 
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Margin="6"
-                                Padding="8"
-                                Width="160"
-                                Height="130"
-                                BorderThickness="1"
-                                Cursor="Hand"
-                                MouseLeftButtonUp="OnPick">
+                <Button Content="Save INI" Margin="12,0,0,0" Padding="10,4" Click="OnSaveIni"/>
+                <Button Content="Load INI" Margin="8,0,0,0"  Padding="10,4" Click="OnLoadIni"/>
+            </StackPanel>
 
-                            <!-- 邊框樣式控制 -->
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="BorderBrush" Value="#DDDDDD"/>
-                                    <Setter Property="Background" Value="#FFFFFF"/>
+            <!-- 右側欄位標題（沿用你原本樣式） -->
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                <TextBlock Text="Icon#" Width="120" FontWeight="Bold"/>
+                <TextBlock Text="Image Selection" Margin="16,0,0,0" FontWeight="Bold"/>
+            </StackPanel>
+        </DockPanel>
 
-                                    <Style.Triggers>
+        <!-- 表格 -->
+        <DataGrid Grid.Row="1"
+                  ItemsSource="{Binding IconSlots}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  HeadersVisibility="None"
+                  BorderThickness="0"
+                  RowHeight="44"
+                  GridLinesVisibility="None">
 
-                                        <!-- (1) 上次選過：黃框、淡黃底 -->
-                                        <DataTrigger Binding="{Binding IsPreviouslySelected}" Value="True">
-                                            <Setter Property="BorderBrush" Value="#FFD966"/>
-                                            <Setter Property="Background" Value="#FFFBEA"/>
-                                        </DataTrigger>
+            <DataGrid.Columns>
 
-                                        <!-- (2) 目前選中：藍框 -->
-                                        <DataTrigger Binding="{Binding IsCurrentSelected}" Value="True">
-                                            <Setter Property="BorderBrush" Value="#4A90E2"/>
-                                            <Setter Property="Background" Value="#EEF5FF"/>
-                                        </DataTrigger>
+                <!-- 左：Icon# -->
+                <DataGridTemplateColumn Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Border Padding="8" BorderBrush="#DDD" BorderThickness="1" CornerRadius="4">
+                                <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}"
+                                           VerticalAlignment="Center"/>
+                            </Border>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
 
-                                        <!-- (3) 滑鼠移入：深灰框 -->
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="BorderBrush" Value="#999999"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
+                <!-- 右：Image Selection（按鈕→開圖片牆） -->
+                <DataGridTemplateColumn Width="250">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding SelectedImageName, Mode=OneWay}"
+                                    HorizontalAlignment="Stretch"
+                                    Padding="10,6"
+                                    Click="OpenPicker_Click"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
 
-                            <!-- 內容區 -->
-                            <Grid>
-                                <StackPanel>
-                                    <Image Source="{Binding ImagePath}"
-                                           Height="90"
-                                           Stretch="UniformToFill"
-                                           Margin="0,0,0,4"/>
-                                    <TextBlock Text="{Binding Name}"
-                                               FontSize="13"
-                                               HorizontalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-
-                                <!-- 右上角：已被其他列使用 -->
-                                <Border HorizontalAlignment="Right"
-                                        VerticalAlignment="Top"
-                                        Margin="0,0,4,0"
-                                        Padding="4,1"
-                                        CornerRadius="3">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Setter Property="Background" Value="#FFE8B5"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsUsedByOthers}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock Text="已被使用"
-                                               FontSize="10"
-                                               Foreground="#7A4B00"/>
-                                </Border>
-                            </Grid>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
-    </DockPanel>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
 </Window>
