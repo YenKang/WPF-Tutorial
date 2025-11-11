@@ -1,58 +1,28 @@
-using System;
-using System.IO;
-using System.Windows;
-using OSDIconFlashMap.ViewModel;
+using PageBase;
 
-namespace OSDIconFlashMap.View
+namespace BistMode
 {
-    public partial class IconToImageMapWindow : Window
+    public partial class BistModeView : NovaPageBase
     {
-        private IconToImageMapViewModel _vm;
+        // 內部持有 ViewModel
+        private BistModeViewModel _vm;
 
-        public IconToImageMapWindow()
+        public BistModeView()
         {
             InitializeComponent();
-
-            // 建立 ViewModel
-            _vm = new IconToImageMapViewModel();
-
-            // 綁定資料上下文
-            this.DataContext = _vm;
-
-            // 載入假圖資料
-            string imageFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "TestIcons");
-            _vm.LoadImagesFromFolder(imageFolder);
         }
 
-        // ---- 以下保持你原本的事件（例如 OnSaveIni / OnLoadIni） ----
-        private void OnSaveIni(object sender, RoutedEventArgs e)
+        public override bool InitializePage()
         {
-            var dlg = new Microsoft.Win32.SaveFileDialog
-            {
-                Filter = "INI files (*.ini)|*.ini|All files (*.*)|*.*",
-                FileName = "ImageMapConfig.ini"
-            };
-            if (dlg.ShowDialog(this) == true)
-            {
-                _vm.SaveToIni(dlg.FileName);
-                MessageBox.Show("Saved successfully.", "INI");
-            }
+            _vm = new BistModeViewModel(MainParameters);
+            DataContext = _vm;
+            return true;
         }
 
-        private void OnLoadIni(object sender, RoutedEventArgs e)
+        // 🔹 對 IronPython 暴露的橋接方法
+        public void SetRegDisplay(object reg)
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "INI files (*.ini)|*.ini|All files (*.*)|*.*",
-                FileName = "ImageMapConfig.ini"
-            };
-            if (dlg.ShowDialog(this) == true)
-            {
-                _vm.LoadFromIni(dlg.FileName);
-                MessageBox.Show("Loaded successfully.", "INI");
-            }
+            _vm?.SetRegDisplay(reg);
         }
-
-        // 若你有開啟圖片牆的事件 OnOpenPickerClick() 也放在這裡。
     }
 }
