@@ -1,32 +1,4 @@
-using Microsoft.Win32;
-using System.Windows;
-
-private void OnSaveIni(object sender, RoutedEventArgs e)
-{
-    var vm = (IconToImageMapViewModel)DataContext;
-    var dlg = new SaveFileDialog
-    {
-        Filter = "INI files (*.ini)|*.ini|All files (*.*)|*.*",
-        FileName = "ImageMapConfig.ini"
-    };
-    if (dlg.ShowDialog(this) == true)
-    {
-        vm.SaveToIni(dlg.FileName);
-        MessageBox.Show("Saved.", "INI");
-    }
-}
-
-private void OnLoadIni(object sender, RoutedEventArgs e)
-{
-    var vm = (IconToImageMapViewModel)DataContext;
-    var dlg = new OpenFileDialog
-    {
-        Filter = "INI files (*.ini)|*.ini|All files (*.*)|*.*",
-        FileName = "ImageMapConfig.ini"
-    };
-    if (dlg.ShowDialog(this) == true)
-    {
-        vm.LoadFromIni(dlg.FileName);
-        MessageBox.Show("Loaded.", "INI");
-    }
-}
+<StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+  <Button Content="Save INI" Margin="0,0,8,0" Padding="10,4" Click="OnSaveIni"/>
+  <Button Content="Load INI"               Padding="10,4" Click="OnLoadIni"/>
+</StackPanel>
