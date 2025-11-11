@@ -1,11 +1,19 @@
-// Model/ImageOption.cs
-public class ImageOption
+// View/IconToImageMapWindow.xaml.cs 內的 OpenPicker_Click
+private void OpenPicker_Click(object sender, RoutedEventArgs e)
 {
-    public string Key { get; set; }        // "image_1"
-    public string Name { get; set; }
-    public string ImagePath { get; set; }
+    var fe  = sender as FrameworkElement;
+    var row = fe?.DataContext as IconSlotModel;
+    if (row == null) return;
 
-    public bool IsPreviouslySelected { get; set; } // 本列上次選
-    public bool IsCurrentSelected { get; set; }    // 本次點選
-    public bool IsUsedByOthers { get; set; }       // 其他列已使用 ← 新增
+    var vm = (IconToImageMapViewModel)DataContext;
+
+    var preKey  = row.SelectedImage != null ? row.SelectedImage.Key : null;
+    var usedKeys = vm.IconSlots
+                     .Where(s => !ReferenceEquals(s, row) && s.SelectedImage != null)
+                     .Select(s => s.SelectedImage.Key)
+                     .ToHashSet(); // C# 7.3 OK (需 using System.Linq;)
+
+    var picker = new ImagePickerWindow(vm.Images, preKey, usedKeys) { Owner = this };
+    if (picker.ShowDialog() == true && picker.Selected != null)
+        row.SelectedImage = picker.Selected;
 }
