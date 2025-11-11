@@ -1,19 +1,47 @@
-// View/IconToImageMapWindow.xaml.cs 內的 OpenPicker_Click
-private void OpenPicker_Click(object sender, RoutedEventArgs e)
+// View/ImagePickerWindow.xaml.cs
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Input;
+using OSDIconFlashMap.Model;
+
+public partial class ImagePickerWindow : Window
 {
-    var fe  = sender as FrameworkElement;
-    var row = fe?.DataContext as IconSlotModel;
-    if (row == null) return;
+    private readonly List<ImageOption> _all;
+    public ImageOption Selected { get; private set; }
 
-    var vm = (IconToImageMapViewModel)DataContext;
+    public ImagePickerWindow(IEnumerable<ImageOption> options, string preSelectedKey, ISet<string> usedKeys)
+    {
+        InitializeComponent();
+        _all = options != null ? options.ToList() : new List<ImageOption>();
 
-    var preKey  = row.SelectedImage != null ? row.SelectedImage.Key : null;
-    var usedKeys = vm.IconSlots
-                     .Where(s => !ReferenceEquals(s, row) && s.SelectedImage != null)
-                     .Select(s => s.SelectedImage.Key)
-                     .ToHashSet(); // C# 7.3 OK (需 using System.Linq;)
+        foreach (var img in _all)
+        {
+            img.IsPreviouslySelected = (preSelectedKey != null && img.Key == preSelectedKey);
+            img.IsUsedByOthers       = (usedKeys != null && usedKeys.Contains(img.Key)); // ★
+            img.IsCurrentSelected    = false;
+        }
 
-    var picker = new ImagePickerWindow(vm.Images, preKey, usedKeys) { Owner = this };
-    if (picker.ShowDialog() == true && picker.Selected != null)
-        row.SelectedImage = picker.Selected;
+        if (!string.IsNullOrEmpty(preSelectedKey))
+        {
+            var hit = _all.FirstOrDefault(x => x.Key == preSelectedKey);
+            if (hit != null) { hit.IsCurrentSelected = true; Selected = hit; }
+        }
+
+        ic.ItemsSource = _all;
+    }
+
+    private void OnPick(object sender, MouseButtonEventArgs e)
+    {
+        var fe = sender as FrameworkElement;
+        var op = fe?.DataContext as ImageOption;
+        if (op == null) return;
+
+        for (int i = 0; i < _all.Count; i++) _all[i].IsCurrentSelected = false;
+        op.IsCurrentSelected = true;
+        Selected = op;
+        ic.Items.Refresh();
+        DialogResult = true;
+        Close();
+    }
 }
