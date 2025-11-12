@@ -1,17 +1,17 @@
-using OSDIconFlashMap.ViewModel;
-
-public partial class IconToImageMapWindow : Window
+public IconToImageMapWindow()
 {
-    public IconToImageMapWindow()
+    try
     {
         InitializeComponent();
-
-        // 若外部沒先塞，就自己建一個
-        if (this.DataContext == null)
-            this.DataContext = new IconToImageMapViewModel();
-
-        var vm = (IconToImageMapViewModel)this.DataContext;
-        vm.InitIconSlots();
-        vm.LoadImagesFromFolder(@"Assets\TestIcons"); // 先用固定資料夾
     }
+    catch (Exception ex)
+    {
+        MessageBox.Show(ex.ToString(), "XAML Load Error");
+        throw;
+    }
+
+    if (DataContext == null) DataContext = new IconToImageMapViewModel();
+    var vm = (IconToImageMapViewModel)DataContext;
+    vm.InitIconSlots();
+    vm.LoadImagesFromFolder(@"Assets\TestIcons");
 }
