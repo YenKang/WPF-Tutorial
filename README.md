@@ -1,19 +1,15 @@
-<!-- OSDx_EN -->
-<DataGridTemplateColumn Header="OSDXEN" Width="90">
-  <DataGridTemplateColumn.CellTemplate>
-    <DataTemplate>
-      <CheckBox IsChecked="{Binding IsOsdEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                HorizontalAlignment="Center" VerticalAlignment="Center"/>
-    </DataTemplate>
-  </DataGridTemplateColumn.CellTemplate>
-</DataGridTemplateColumn>
+using System;
+using System.Globalization;
+using System.Windows.Data;
 
-<!-- TTALEEN -->
-<DataGridTemplateColumn Header="TTALEEN" Width="90">
-  <DataGridTemplateColumn.CellTemplate>
-    <DataTemplate>
-      <CheckBox IsChecked="{Binding IsTtalEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                HorizontalAlignment="Center" VerticalAlignment="Center"/>
-    </DataTemplate>
-  </DataGridTemplateColumn.CellTemplate>
-</DataGridTemplateColumn>
+namespace OSDIconFlashMap.Converters
+{
+    public class BoolTo01Converter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => (value is bool b && b) ? "1" : "0";
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => (value?.ToString() == "1");
+    }
+}
