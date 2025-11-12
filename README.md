@@ -1,117 +1,99 @@
-<Window x:Class="OSDIconFlashMap.View.IconToImageMapWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Icon → Image Selection"
-        Width="920" Height="660"
-        WindowStartupLocation="CenterOwner">
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Diagnostics;
+using OSDIconFlashMap.Model;
+using OSDIconFlashMap.ViewModel;
 
-    <!-- 不在這裡綁 DataContext，改由 .xaml.cs 建構子統一處理，避免被外部覆蓋 -->
+namespace OSDIconFlashMap.View
+{
+    public partial class IconToImageMapWindow : Window
+    {
+        public IconToImageMapWindow()
+        {
+            InitializeComponent();
 
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+            // 1) 取得/建立 ViewModel；統一由這裡設定 DataContext
+            var vm = this.DataContext as IconToImageMapViewModel;
+            if (vm == null)
+            {
+                vm = new IconToImageMapViewModel();
+                this.DataContext = vm;
+            }
 
-        <!-- 資料格（七欄） -->
-        <DataGrid Grid.Row="0"
-                  ItemsSource="{Binding IconSlots}"
-                  AutoGenerateColumns="False"
-                  HeadersVisibility="Column"
-                  GridLinesVisibility="None"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  RowHeight="44"
-                  ColumnHeaderHeight="32"
-                  FontSize="13">
+            // 2) 建 30 列（只做一次）
+            if (vm.IconSlots.Count == 0)
+            {
+                vm.InitIconSlots();
+                Debug.WriteLine($"[IconMap] IconSlots = {vm.IconSlots.Count}"); // 應為 30
+            }
 
-            <DataGrid.Columns>
-                <!-- 1 Icon # -->
-                <DataGridTemplateColumn Header="Icon #" Width="120">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+            // 3) 載圖片（只做一次）
+            if (vm.Images.Count == 0)
+            {
+                vm.LoadImagesFromFolder(@"Assets\TestIcons");
+                Debug.WriteLine($"[IconMap] Images = {vm.Images.Count}"); // 應 > 0
+            }
 
-                <!-- 2 Image Selection（按鈕呼叫 OpenPicker_Click） -->
-                <DataGridTemplateColumn Header="Image Selection" Width="250">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button Content="{Binding SelectedImageName}"
-                                    Padding="10,6" HorizontalAlignment="Stretch"
-                                    Click="OpenPicker_Click"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+            // 4) 再加一道保險：Loaded 時複檢，避免外部覆蓋 DataContext 導致空白
+            this.Loaded += (s, e) => EnsureInitialized();
+        }
 
-                <!-- 3 SRAM Start Address（唯讀文字） -->
-                <DataGridTemplateColumn Header="SRAM Start Address" Width="160">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding SramStartAddress}"
-                                       FontFamily="Consolas"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+        /// <summary>輸出結果：IconIndex → 選到的 ImageOption</summary>
+        public Dictionary<int, ImageOption> ResultMap { get; private set; }
 
-                <!-- 4 OSD Selection（1..30） -->
-                <DataGridTemplateColumn Header="OSD Selection" Width="140">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <ComboBox Width="120"
-                                      SelectedValuePath="."
-                                      SelectedValue="{Binding OsdTargetIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                                <ComboBox.ItemsSource>
-                                    <!-- 從 Window.DataContext 取 OsdOptions -->
-                                    <Binding Path="DataContext.OsdOptions"
-                                             RelativeSource="{RelativeSource AncestorType=Window}"/>
-                                </ComboBox.ItemsSource>
-                            </ComboBox>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+        /// <summary>保險：確保有 30 列、有圖片</summary>
+        private void EnsureInitialized()
+        {
+            var vm = this.DataContext as IconToImageMapViewModel;
+            if (vm == null)
+            {
+                vm = new IconToImageMapViewModel();
+                this.DataContext = vm;
+            }
+            if (vm.IconSlots.Count == 0) vm.InitIconSlots();
+            if (vm.Images.Count == 0) vm.LoadImagesFromFolder(@"Assets\TestIcons");
+        }
 
-                <!-- 5 OSDx_EN -->
-                <DataGridTemplateColumn Header="OSDx_EN" Width="90">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <CheckBox IsChecked="{Binding IsOsdEnabled, Mode=TwoWay}"
-                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+        /// <summary>第 2 欄「Image Selection」按鈕：開啟圖片牆（全部顯示、允許重複選）</summary>
+        private void OpenPicker_Click(object sender, RoutedEventArgs e)
+        {
+            var vm   = this.DataContext as IconToImageMapViewModel;
+            var slot = (sender as Button)?.DataContext as IconSlotModel;
+            if (vm == null || slot == null) return;
 
-                <!-- 6 HPos -->
-                <DataGridTemplateColumn Header="HPos" Width="90">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBox Text="{Binding HPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Width="70" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
+            if (vm.Images.Count == 0) vm.LoadImagesFromFolder(@"Assets\TestIcons");
 
-                <!-- 7 VPos -->
-                <DataGridTemplateColumn Header="VPos" Width="90">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBox Text="{Binding VPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Width="70" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+            // 其他列使用中的 key（僅供標示；仍可重複選）
+            var usedByOthers = vm.IconSlots
+                                  .Where(s => !ReferenceEquals(s, slot))
+                                  .Select(s => s.SelectedImage?.Key)
+                                  .Where(k => !string.IsNullOrEmpty(k))
+                                  .ToHashSet();
 
-        <!-- OK / Cancel（用來輸出 ResultMap；不需要可移除） -->
-        <StackPanel Grid.Row="1" Orientation="Horizontal"
-                    HorizontalAlignment="Right" Margin="0,12,0,0">
-            <Button Content="OK" Width="100" Height="32" Click="ConfirmAndClose"/>
-            <Button Content="Cancel" Width="100" Height="32" Margin="8,0,0,0" IsCancel="True"/>
-        </StackPanel>
-    </Grid>
-</Window>
+            var currentKey = slot.SelectedImage?.Key;
+
+            var picker = new ImagePickerWindow(vm.Images, currentKey, usedByOthers)
+            {
+                Owner = this
+            };
+
+            if (picker.ShowDialog() == true && picker.Selected != null)
+            {
+                slot.SelectedImage = picker.Selected; // setter 內會更新文字與 SRAM
+            }
+        }
+
+        /// <summary>OK：轉出 ResultMap，讓 ShowDialog() 的呼叫端接收</summary>
+        private void ConfirmAndClose(object sender, RoutedEventArgs e)
+        {
+            var vm = this.DataContext as IconToImageMapViewModel;
+            if (vm != null)
+                ResultMap = vm.IconSlots.ToDictionary(s => s.IconIndex, s => s.SelectedImage);
+
+            this.DialogResult = true;
+            this.Close();
+        }
+    }
+}
