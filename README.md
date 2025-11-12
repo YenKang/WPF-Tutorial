@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:OSDIconFlashMap.ViewModel"
         Title="Icon → Image Selection"
-        Width="900"
-        Height="640"
+        Width="920"
+        Height="660"
         WindowStartupLocation="CenterOwner">
 
     <Window.DataContext>
@@ -12,47 +12,35 @@
     </Window.DataContext>
 
     <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
 
-        <!-- 標題列 -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,8">
-            <TextBlock Text="Icon #" Width="120" FontWeight="Bold" VerticalAlignment="Center"/>
-            <TextBlock Text="Image Selection" Width="250" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"/>
-            <TextBlock Text="SRAM Start Address" Width="160" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"/>
-            <TextBlock Text="OSD Selection" Width="140" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"/>
-            <TextBlock Text="OSDx_EN" Width="90" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"/>
-            <TextBlock Text="HPos" Width="90" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"/>
-            <TextBlock Text="VPos" Width="90" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"/>
-        </DockPanel>
-
-        <!-- 主內容 DataGrid -->
-        <DataGrid Grid.Row="1"
-                  ItemsSource="{Binding IconSlots}"
+        <!-- ✅ 直接用 DataGrid Header -->
+        <DataGrid ItemsSource="{Binding IconSlots}"
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
-                  HeadersVisibility="None"
+                  HeadersVisibility="Column"
                   GridLinesVisibility="None"
-                  RowHeight="44">
+                  RowHeight="44"
+                  ColumnHeaderHeight="32"
+                  IsReadOnly="False"
+                  FontSize="13"
+                  ColumnHeaderStyle="{StaticResource {x:Static DataGrid.ColumnHeaderStyleKey}}">
 
             <DataGrid.Columns>
 
                 <!-- 1️⃣ Icon # -->
-                <DataGridTemplateColumn Width="120">
+                <DataGridTemplateColumn Header="Icon #" Width="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}"
-                                       VerticalAlignment="Center"
-                                       HorizontalAlignment="Center"/>
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
                 <!-- 2️⃣ Image Selection -->
-                <DataGridTemplateColumn Width="250">
+                <DataGridTemplateColumn Header="Image Selection" Width="250">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Content="{Binding SelectedImageName}"
@@ -64,19 +52,19 @@
                 </DataGridTemplateColumn>
 
                 <!-- 3️⃣ SRAM Start Address -->
-                <DataGridTemplateColumn Width="160">
+                <DataGridTemplateColumn Header="SRAM Start Address" Width="160">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding SramStartAddress}"
                                        FontFamily="Consolas"
-                                       VerticalAlignment="Center"
-                                       HorizontalAlignment="Center"/>
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
                 <!-- 4️⃣ OSD Selection -->
-                <DataGridTemplateColumn Width="140">
+                <DataGridTemplateColumn Header="OSD Selection" Width="140">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <ComboBox Width="120"
@@ -92,16 +80,18 @@
                 </DataGridTemplateColumn>
 
                 <!-- 5️⃣ OSDx_EN -->
-                <DataGridTemplateColumn Width="90">
+                <DataGridTemplateColumn Header="OSDx_EN" Width="90">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <CheckBox IsChecked="{Binding IsOsdEnabled, Mode=TwoWay}"/>
+                            <CheckBox IsChecked="{Binding IsOsdEnabled, Mode=TwoWay}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
                 <!-- 6️⃣ HPos -->
-                <DataGridTemplateColumn Width="90">
+                <DataGridTemplateColumn Header="HPos" Width="90">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBox Text="{Binding HPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
@@ -113,7 +103,7 @@
                 </DataGridTemplateColumn>
 
                 <!-- 7️⃣ VPos -->
-                <DataGridTemplateColumn Width="90">
+                <DataGridTemplateColumn Header="VPos" Width="90">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBox Text="{Binding VPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
