@@ -1,18 +1,88 @@
-### feat(osd-icon-map): 完成七欄 Icon→Image 對應頁面與圖片牆（穩定版）
+<DataGrid ItemsSource="{Binding IconSlots}"
+          AutoGenerateColumns="False"
+          HeadersVisibility="Column"
+          GridLinesVisibility="None"
+          CanUserAddRows="False" CanUserDeleteRows="False"
+          RowHeight="44" ColumnHeaderHeight="32">
 
-- 新增 IconToImageMapWindow（七欄 DataGrid）
-  Icon# / Image Selection / SRAM / OSD / EN / HPos / VPos
-- 採 DataGrid Header 自動對齊；排版整齊。
-- IconSlotModel 改用 GetValue/SetValue 格式。
-- ImagePickerWindow：
-  - 顯示所有圖片、不過濾。
-  - 已被其他列使用的圖片有標示，仍可重複選。
-  - 本列選中圖片以藍框顯示。
-- IconToImageMapWindow.xaml.cs：
-  - 建構子確保初始化（IconSlots + Images）。
-  - `OpenPicker_Click`：開啟圖片牆，標示使用中項。
-  - `ConfirmAndClose`：輸出 `ResultMap (IconIndex→ImageOption)`。
-- 加入 OK/Cancel 按鈕，支援 ShowDialog() 模式。
+  <DataGrid.Columns>
+    <!-- 1 Icon # -->
+    <DataGridTemplateColumn Header="ICON #" Width="120">
+      <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </DataTemplate>
+      </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
 
-✅ 成功顯示 30 列資料、圖片牆可正常選取。
-🚧 待辦：IC Selection / HPos-VPos 驗證 / SRAM 外部設定 / 儲存功能。
+    <!-- 2 Image Selection（全集 Images） -->
+    <DataGridTemplateColumn Header="IMAGE SELECTION" Width="250">
+      <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+          <Button Content="{Binding SelectedImageName}"
+                  Padding="10,6" HorizontalAlignment="Stretch"
+                  Click="OpenPicker_Click"/>
+        </DataTemplate>
+      </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
+
+    <!-- 3 SRAM Start Address -->
+    <DataGridTemplateColumn Header="SRAM START ADDRESS" Width="160">
+      <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding SramStartAddress}" FontFamily="Consolas"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </DataTemplate>
+      </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
+
+    <!-- 3.5 新增：OSD #（顯示 OSD1..OSD30；先用 IconIndex 對應） -->
+    <DataGridTemplateColumn Header="OSD #" Width="120">
+      <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding IconIndex, StringFormat=OSD{0}}"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </DataTemplate>
+      </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
+
+    <!-- 4 OSD Selection（先用全集 Images，之後一行改來源） -->
+    <DataGridTemplateColumn Header="OSD SELECTION" Width="160">
+      <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+          <Button Content="{Binding OsdSelectedImageName}"
+                  Padding="10,6" HorizontalAlignment="Stretch"
+                  Click="OpenOsdPicker_Click"/>
+        </DataTemplate>
+      </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
+
+    <!-- 5~7 保持舊欄位 -->
+    <DataGridTemplateColumn Header="OSDX_EN" Width="90">
+      <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+          <CheckBox IsChecked="{Binding IsOsdEnabled}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </DataTemplate>
+      </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
+
+    <DataGridTemplateColumn Header="HPOS" Width="90">
+      <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+          <TextBox Text="{Binding HPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                   Width="70" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </DataTemplate>
+      </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
+
+    <DataGridTemplateColumn Header="VPOS" Width="90">
+      <DataGridTemplateColumn.CellTemplate>
+        <DataTemplate>
+          <TextBox Text="{Binding VPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                   Width="70" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </DataTemplate>
+      </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
+  </DataGrid.Columns>
+</DataGrid>
