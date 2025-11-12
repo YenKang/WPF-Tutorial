@@ -1,15 +1,16 @@
-using System;
-using System.Globalization;
-using System.Windows.Data;
+<Window
+    ...
+    xmlns:conv="clr-namespace:OSDIconFlashMap.Converters"
+    xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase">
 
-namespace OSDIconFlashMap.Converters
-{
-    public class BoolTo01Converter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-            => (value is bool b && b) ? "1" : "0";
+    <Window.Resources>
+        <!-- 讓摘要表從 30 → 1 顯示 -->
+        <CollectionViewSource x:Key="IconSlotsDesc" Source="{Binding IconSlots}">
+            <CollectionViewSource.SortDescriptions>
+                <scm:SortDescription PropertyName="IconIndex" Direction="Descending"/>
+            </CollectionViewSource.SortDescriptions>
+        </CollectionViewSource>
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-            => (value?.ToString() == "1");
-    }
-}
+        <!-- bool → "1"/"0" -->
+        <conv:BoolTo01Converter x:Key="Bool01"/>
+    </Window.Resources>
