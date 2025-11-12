@@ -1,17 +1,22 @@
-public IconToImageMapWindow()
+public ImagePickerWindow(IEnumerable<ImageOption> options, string preSelectedKey, ISet<string> usedKeys)
 {
-    try
+    InitializeComponent();
+
+    _all = options?.ToList() ?? new List<ImageOption>();
+    foreach (var img in _all)
     {
-        InitializeComponent();
+        img.IsUsedByOthers     = usedKeys != null && usedKeys.Contains(img.Key);
+        img.IsPreviouslySelected = preSelectedKey != null && img.Key == preSelectedKey;
+        img.IsCurrentSelected  = false;
     }
-    catch (Exception ex)
+    if (!string.IsNullOrEmpty(preSelectedKey))
     {
-        MessageBox.Show(ex.ToString(), "XAML Load Error");
-        throw;
+        var hit = _all.FirstOrDefault(x => x.Key == preSelectedKey);
+        if (hit != null) { hit.IsCurrentSelected = true; Selected = hit; }
     }
 
-    if (DataContext == null) DataContext = new IconToImageMapViewModel();
-    var vm = (IconToImageMapViewModel)DataContext;
-    vm.InitIconSlots();
-    vm.LoadImagesFromFolder(@"Assets\TestIcons");
+    // ✅ 關鍵三行：先拔、清、再綁
+    ic.ItemsSource = null;
+    ic.Items.Clear();
+    ic.ItemsSource = _all;
 }
