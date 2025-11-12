@@ -1,56 +1,64 @@
-using OSDIconFlashMap.Model;
-using System.Collections.ObjectModel;
-using System.Linq;
-using Utility.MVVM;
+<DataGrid ItemsSource="{Binding IconSlots}"
+          AutoGenerateColumns="False"
+          CanUserAddRows="False"
+          RowHeight="44"
+          GridLinesVisibility="None">
 
-namespace OSDIconFlashMap.ViewModel
-{
-    public class IconToImageMapViewModel : ViewModelBase
-    {
-        public ObservableCollection<IconSlotModel> IconSlots { get; } = new ObservableCollection<IconSlotModel>();
-        public ObservableCollection<ImageOption> Images { get; } = new ObservableCollection<ImageOption>();
+    <!-- 1. Icon #N（唯讀） -->
+    <DataGridTemplateColumn Header="Icon #N" Width="90">
+        <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+                <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}" VerticalAlignment="Center"/>
+            </DataTemplate>
+        </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
 
-        // 給「OSD Selection」下拉用：1..30
-        public System.Collections.Generic.IReadOnlyList<int> OsdOptions { get; } =
-            Enumerable.Range(1, 30).ToList();
+    <!-- 2. Image Selection（按鈕開圖片牆） -->
+    <DataGridTemplateColumn Header="Image Selection" Width="250">
+        <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+                <Button Content="{Binding SelectedImageName}"
+                        HorizontalAlignment="Stretch"
+                        Padding="10,6"
+                        Click="OpenPicker_Click"/>
+            </DataTemplate>
+        </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
 
-        public IconToImageMapViewModel()
-        {
-            InitIconSlots();        // 你原本就呼叫
-            // Images 仍可用 LoadImages(...) / LoadImagesFromFolder(...) 載入
-        }
+    <!-- 3. SRAM Start Address（唯讀，由工具計算） -->
+    <DataGridTemplateColumn Header="SRAM Start Address" Width="160">
+        <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+                <TextBlock Text="{Binding SramStartAddress}" VerticalAlignment="Center"/>
+            </DataTemplate>
+        </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
 
-        // === 初始化 30 列（補齊預設值＋注入 SRAM 計算器） ===
-        public void InitIconSlots()
-        {
-            IconSlots.Clear();
-            for (int i = 1; i <= 30; i++)
-            {
-                IconSlots.Add(new IconSlotModel
-                {
-                    IconIndex = i,
-                    SelectedImage = null,   // 未選
-                    OsdTargetIndex = 0,     // 未選
-                    IsOsdEnabled = false,   // 未啟用
-                    HPos = 1,
-                    VPos = 1,
-                    CalcSramStartAddress = DemoSramCalc
-                });
-            }
-            RaisePropertyChanged(nameof(IconSlots));
-        }
+    <!-- 4. OSD Selection（1..30；0=未選） -->
+    <DataGridTemplateColumn Header="OSD Selection" Width="140">
+        <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate>
+                <ComboBox Width="120"
+                          SelectedValuePath="."
+                          SelectedValue="{Binding OsdTargetIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBox.ItemsSource>
+                        <Binding Path="DataContext.OsdOptions" RelativeSource="{RelativeSource AncestorType=Window}"/>
+                    </ComboBox.ItemsSource>
+                </ComboBox>
+            </DataTemplate>
+        </DataGridTemplateColumn.CellTemplate>
+    </DataGridTemplateColumn>
 
-        // === Demo：SRAM 起始位址公式（之後換正式規則即可） ===
-        private string DemoSramCalc(IconSlotModel slot)
-        {
-            const int baseAddr = 0x000000; // demo
-            const int stride   = 0x001000; // 每張 4KB（demo）
-            var addr = baseAddr + (slot.IconIndex - 1) * stride;
-            return "0x" + addr.ToString("X6");
-        }
+    <!-- 5. OSDx_EN -->
+    <DataGridCheckBoxColumn Header="OSDx_EN"
+                            Binding="{Binding IsOsdEnabled, Mode=TwoWay}"
+                            Width="90"/>
 
-        // 你原本就有：
-        // public void LoadImages(params ImageOption[] options) { ... }
-        // public void LoadImagesFromFolder(string relativeFolder) { ... }
-    }
-}
+    <!-- 6. HPos -->
+    <DataGridTextColumn Header="HPos" Width="90"
+                        Binding="{Binding HPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+    <!-- 7. VPos -->
+    <DataGridTextColumn Header="VPos" Width="90"
+                        Binding="{Binding VPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+</DataGrid>
