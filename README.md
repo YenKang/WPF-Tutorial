@@ -1,66 +1,72 @@
-<Window x:Class="OSDIconFlashMap.View.ImagePickerWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Pick an Image" Width="640" Height="520"
-        WindowStartupLocation="CenterOwner">
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Input;
+using OSDIconFlashMap.Model;
 
-    <!-- 圖片牆（必須 x:Name="ic" 供 .xaml.cs 設 ItemsSource） -->
-    <ItemsControl x:Name="ic" Margin="12">
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <WrapPanel />
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
+namespace OSDIconFlashMap.View
+{
+    /// <summary>
+    /// 圖片牆：顯示全部圖片，僅做「其他列使用中 / 本列目前選」的視覺標示；
+    /// 不禁用、允許重複選取。
+    /// </summary>
+    public partial class ImagePickerWindow : Window
+    {
+        private readonly List<ImageOption> _all;   // 全部圖片來源
+        public ImageOption Selected { get; private set; } // 回傳選中的圖片
 
-        <!-- 單卡片樣式 -->
-        <ItemsControl.ItemTemplate>
-            <DataTemplate>
-                <Grid>
-                    <!-- 外框：本列目前選中（藍） -->
-                    <Border Margin="6" CornerRadius="4" BorderThickness="2">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="BorderBrush" Value="Transparent"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsCurrentSelected}" Value="True">
-                                        <Setter Property="BorderBrush" Value="#2F80ED"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
+        public ImagePickerWindow(IEnumerable<ImageOption> options,
+                                 string currentSelectedKey,
+                                 ISet<string> usedByOthersKeys)
+        {
+            InitializeComponent();
 
-                        <StackPanel Width="140" Height="140">
-                            <Image Source="{Binding ImagePath}" Stretch="UniformToFill" Height="100"/>
-                            <TextBlock Text="{Binding Name}" Margin="0,6,0,0"
-                                       HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                        </StackPanel>
-                    </Border>
+            _all = options?.ToList() ?? new List<ImageOption>();
 
-                    <!-- 右上角：其他列使用中（僅標示，不禁用） -->
-                    <Border HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Margin="0,8,8,0" Padding="4,2"
-                            Background="#FFF5B5" CornerRadius="3">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Visibility" Value="Collapsed"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsUsedByOthers}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock Text="其他列使用中" FontSize="10" Foreground="#7A4B00" FontWeight="Bold"/>
-                    </Border>
-                </Grid>
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
+            // 先清旗標（同一批物件可能多次被用來開視窗）
+            foreach (var img in _all)
+            {
+                img.IsUsedByOthers = false;
+                img.IsCurrentSelected = false;
+            }
 
-        <!-- 點擊選取（允許重複選） -->
-        <ItemsControl.ItemContainerStyle>
-            <Style TargetType="ContentPresenter">
-                <EventSetter Event="MouseLeftButtonUp" Handler="OnPick"/>
-            </Style>
-        </ItemsControl.ItemContainerStyle>
-    </ItemsControl>
-</Window>
+            // 標示：其他列使用中
+            if (usedByOthersKeys != null && usedByOthersKeys.Count > 0)
+            {
+                foreach (var img in _all)
+                {
+                    if (!string.IsNullOrEmpty(img.Key) && usedByOthersKeys.Contains(img.Key))
+                        img.IsUsedByOthers = true;
+                }
+            }
+
+            // 標示：本列目前選
+            if (!string.IsNullOrEmpty(currentSelectedKey))
+            {
+                var hit = _all.FirstOrDefault(x => x.Key == currentSelectedKey);
+                if (hit != null) { hit.IsCurrentSelected = true; Selected = hit; }
+            }
+
+            // 不做任何過濾：永遠顯示全部圖片
+            ic.ItemsSource = null;
+            ic.Items.Clear();
+            ic.ItemsSource = _all;
+        }
+
+        // 點一下就選；允許重複選
+        private void OnPick(object sender, MouseButtonEventArgs e)
+        {
+            var fe = sender as FrameworkElement;
+            var op = fe?.DataContext as ImageOption;
+            if (op == null) return;
+
+            foreach (var img in _all) img.IsCurrentSelected = false;
+            op.IsCurrentSelected = true;
+            Selected = op;
+
+            ic.Items.Refresh();  // 讓藍框即時更新
+            DialogResult = true; // 對話框成功
+            Close();
+        }
+    }
+}
