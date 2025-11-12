@@ -1,64 +1,37 @@
-<DataGrid ItemsSource="{Binding IconSlots}"
-          AutoGenerateColumns="False"
-          CanUserAddRows="False"
-          RowHeight="44"
-          GridLinesVisibility="None">
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using OSDIconFlashMap.Model;
+using OSDIconFlashMap.ViewModel;
+using OSDIconFlashMap.View; // 你的 ImagePickerWindow 命名空間
 
-    <!-- 1. Icon #N（唯讀） -->
-    <DataGridTemplateColumn Header="Icon #N" Width="90">
-        <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-                <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}" VerticalAlignment="Center"/>
-            </DataTemplate>
-        </DataGridTemplateColumn.CellTemplate>
-    </DataGridTemplateColumn>
+private void OpenPicker_Click(object sender, RoutedEventArgs e)
+{
+    var btn  = (Button)sender;
+    var slot = (IconSlotModel)btn.DataContext;
+    var vm   = (IconToImageMapViewModel)this.DataContext;
 
-    <!-- 2. Image Selection（按鈕開圖片牆） -->
-    <DataGridTemplateColumn Header="Image Selection" Width="250">
-        <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-                <Button Content="{Binding SelectedImageName}"
-                        HorizontalAlignment="Stretch"
-                        Padding="10,6"
-                        Click="OpenPicker_Click"/>
-            </DataTemplate>
-        </DataGridTemplateColumn.CellTemplate>
-    </DataGridTemplateColumn>
+    // 1) 準備圖片清單（沿用你既有做法：固定/假資料 or 掃資料夾）
+    vm.LoadImagesFromFolder("Assets/TestIcons");
 
-    <!-- 3. SRAM Start Address（唯讀，由工具計算） -->
-    <DataGridTemplateColumn Header="SRAM Start Address" Width="160">
-        <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-                <TextBlock Text="{Binding SramStartAddress}" VerticalAlignment="Center"/>
-            </DataTemplate>
-        </DataGridTemplateColumn.CellTemplate>
-    </DataGridTemplateColumn>
+    // 2) 準備「已被其他列使用」清單（排除自己）
+    var used = new HashSet<string>(
+        vm.IconSlots.Where(s => !ReferenceEquals(s, slot))
+                    .Select(s => s.SelectedImage)
+                    .Where(img => img != null && !string.IsNullOrEmpty(img.Key))
+                    .Select(img => img.Key)
+    );
 
-    <!-- 4. OSD Selection（1..30；0=未選） -->
-    <DataGridTemplateColumn Header="OSD Selection" Width="140">
-        <DataGridTemplateColumn.CellTemplate>
-            <DataTemplate>
-                <ComboBox Width="120"
-                          SelectedValuePath="."
-                          SelectedValue="{Binding OsdTargetIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
-                    <ComboBox.ItemsSource>
-                        <Binding Path="DataContext.OsdOptions" RelativeSource="{RelativeSource AncestorType=Window}"/>
-                    </ComboBox.ItemsSource>
-                </ComboBox>
-            </DataTemplate>
-        </DataGridTemplateColumn.CellTemplate>
-    </DataGridTemplateColumn>
+    // 3) 當前列之前選過的 key（可為 null）
+    var preKey = slot.SelectedImage == null ? null : slot.SelectedImage.Key;
 
-    <!-- 5. OSDx_EN -->
-    <DataGridCheckBoxColumn Header="OSDx_EN"
-                            Binding="{Binding IsOsdEnabled, Mode=TwoWay}"
-                            Width="90"/>
-
-    <!-- 6. HPos -->
-    <DataGridTextColumn Header="HPos" Width="90"
-                        Binding="{Binding HPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-
-    <!-- 7. VPos -->
-    <DataGridTextColumn Header="VPos" Width="90"
-                        Binding="{Binding VPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-</DataGrid>
+    // 4) 開圖片牆
+    var picker = new ImagePickerWindow(vm.Images, preKey, used) { Owner = this };
+    if (picker.ShowDialog() == true && picker.Selected != null)
+    {
+        // 5) 回填
+        slot.SelectedImage = picker.Selected;
+        // SRAM 位址會因 SelectedImage setter → RecomputeSramStartAddress() 自動更新
+    }
+}
