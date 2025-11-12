@@ -1,54 +1,56 @@
+using OSDIconFlashMap.Model;
+using System.Collections.ObjectModel;
+using System.Linq;
 using Utility.MVVM;
 
-namespace OSDIconFlashMap.Model
+namespace OSDIconFlashMap.ViewModel
 {
-    public class IconSlotModel : ViewModelBase
+    public class IconToImageMapViewModel : ViewModelBase
     {
-        // 1) Icon #N（唯讀顯示：建立時填 1..30）
-        private int _iconIndex;
-        public int IconIndex { get { return _iconIndex; } set { _iconIndex = value; RaisePropertyChanged(nameof(IconIndex)); } }
+        public ObservableCollection<IconSlotModel> IconSlots { get; } = new ObservableCollection<IconSlotModel>();
+        public ObservableCollection<ImageOption> Images { get; } = new ObservableCollection<ImageOption>();
 
-        // 2) Image Selection（選到的圖片）
-        private ImageOption _selectedImage;
-        public ImageOption SelectedImage
+        // 給「OSD Selection」下拉用：1..30
+        public System.Collections.Generic.IReadOnlyList<int> OsdOptions { get; } =
+            Enumerable.Range(1, 30).ToList();
+
+        public IconToImageMapViewModel()
         {
-            get { return _selectedImage; }
-            set
+            InitIconSlots();        // 你原本就呼叫
+            // Images 仍可用 LoadImages(...) / LoadImagesFromFolder(...) 載入
+        }
+
+        // === 初始化 30 列（補齊預設值＋注入 SRAM 計算器） ===
+        public void InitIconSlots()
+        {
+            IconSlots.Clear();
+            for (int i = 1; i <= 30; i++)
             {
-                if (Equals(_selectedImage, value)) return;
-                _selectedImage = value;
-                RaisePropertyChanged(nameof(SelectedImage));
-                RaisePropertyChanged(nameof(SelectedImageName));
-                RecomputeSramStartAddress(); // 選圖變更 → 重算 SRAM
+                IconSlots.Add(new IconSlotModel
+                {
+                    IconIndex = i,
+                    SelectedImage = null,   // 未選
+                    OsdTargetIndex = 0,     // 未選
+                    IsOsdEnabled = false,   // 未啟用
+                    HPos = 1,
+                    VPos = 1,
+                    CalcSramStartAddress = DemoSramCalc
+                });
             }
+            RaisePropertyChanged(nameof(IconSlots));
         }
-        public string SelectedImageName { get { return _selectedImage == null ? "未選擇" : _selectedImage.Name; } }
 
-        // 3) SRAM Start Address（工具計算 → 唯讀）
-        private string _sramStartAddress = "-";
-        public string SramStartAddress { get { return _sramStartAddress; } private set { _sramStartAddress = value; RaisePropertyChanged(nameof(SramStartAddress)); } }
-
-        // 4) OSD Selection（1..30；0=未選）
-        private int _osdTargetIndex;
-        public int OsdTargetIndex { get { return _osdTargetIndex; } set { if (_osdTargetIndex != value) { _osdTargetIndex = value; RaisePropertyChanged(nameof(OsdTargetIndex)); } } }
-
-        // 5) OSDx_EN（預設 false；之後你可跟 OsdTargetIndex 連動）
-        private bool _isOsdEnabled;
-        public bool IsOsdEnabled { get { return _isOsdEnabled; } set { if (_isOsdEnabled != value) { _isOsdEnabled = value; RaisePropertyChanged(nameof(IsOsdEnabled)); } } }
-
-        // 6) HPos（先不嚴格卡，之後補 ValidationRule）
-        private int _hPos = 1;
-        public int HPos { get { return _hPos; } set { _hPos = value; RaisePropertyChanged(nameof(HPos)); } }
-
-        // 7) VPos（先不嚴格卡）
-        private int _vPos = 1;
-        public int VPos { get { return _vPos; } set { _vPos = value; RaisePropertyChanged(nameof(VPos)); } }
-
-        // 由 VM 注入的計算器（易於替換公式 / 因 IC 不同）
-        public System.Func<IconSlotModel, string> CalcSramStartAddress { get; set; }
-        private void RecomputeSramStartAddress()
+        // === Demo：SRAM 起始位址公式（之後換正式規則即可） ===
+        private string DemoSramCalc(IconSlotModel slot)
         {
-            SramStartAddress = (CalcSramStartAddress == null || SelectedImage == null) ? "-" : CalcSramStartAddress(this);
+            const int baseAddr = 0x000000; // demo
+            const int stride   = 0x001000; // 每張 4KB（demo）
+            var addr = baseAddr + (slot.IconIndex - 1) * stride;
+            return "0x" + addr.ToString("X6");
         }
+
+        // 你原本就有：
+        // public void LoadImages(params ImageOption[] options) { ... }
+        // public void LoadImagesFromFolder(string relativeFolder) { ... }
     }
 }
