@@ -2,14 +2,12 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:OSDIconFlashMap.ViewModel"
-        xmlns:model="clr-namespace:OSDIconFlashMap.Model"
         Title="Icon → Image Selection"
         Width="900"
         Height="640"
         WindowStartupLocation="CenterOwner">
 
     <Window.DataContext>
-        <!-- 預設 VM：若外部沒注入會自動建立 -->
         <vm:IconToImageMapViewModel/>
     </Window.DataContext>
 
@@ -19,7 +17,7 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- === Header 標題列 === -->
+        <!-- 標題列 -->
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
             <TextBlock Text="Icon #" Width="120" FontWeight="Bold" VerticalAlignment="Center"/>
             <TextBlock Text="Image Selection" Width="250" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"/>
@@ -30,7 +28,7 @@
             <TextBlock Text="VPos" Width="90" FontWeight="Bold" Margin="16,0,0,0" VerticalAlignment="Center"/>
         </DockPanel>
 
-        <!-- === 主表格 === -->
+        <!-- 主內容 DataGrid -->
         <DataGrid Grid.Row="1"
                   ItemsSource="{Binding IconSlots}"
                   AutoGenerateColumns="False"
@@ -38,16 +36,16 @@
                   CanUserDeleteRows="False"
                   HeadersVisibility="None"
                   GridLinesVisibility="None"
-                  RowHeight="44"
-                  IsReadOnly="False">
+                  RowHeight="44">
 
             <DataGrid.Columns>
-                <!-- 1️⃣ Icon #N -->
+
+                <!-- 1️⃣ Icon # -->
                 <DataGridTemplateColumn Width="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}" 
-                                       VerticalAlignment="Center" 
+                            <TextBlock Text="{Binding IconIndex, StringFormat=Icon #{0}}"
+                                       VerticalAlignment="Center"
                                        HorizontalAlignment="Center"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -69,8 +67,9 @@
                 <DataGridTemplateColumn Width="160">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding SramStartAddress}" 
-                                       VerticalAlignment="Center" 
+                            <TextBlock Text="{Binding SramStartAddress}"
+                                       FontFamily="Consolas"
+                                       VerticalAlignment="Center"
                                        HorizontalAlignment="Center"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -93,17 +92,38 @@
                 </DataGridTemplateColumn>
 
                 <!-- 5️⃣ OSDx_EN -->
-                <DataGridCheckBoxColumn Width="90"
-                                        Binding="{Binding IsOsdEnabled, Mode=TwoWay}"
-                                        EditingElementStyle="{x:Null}"/>
+                <DataGridTemplateColumn Width="90">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <CheckBox IsChecked="{Binding IsOsdEnabled, Mode=TwoWay}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
 
                 <!-- 6️⃣ HPos -->
-                <DataGridTextColumn Width="90"
-                                    Binding="{Binding HPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <DataGridTemplateColumn Width="90">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding HPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     Width="70"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
 
                 <!-- 7️⃣ VPos -->
-                <DataGridTextColumn Width="90"
-                                    Binding="{Binding VPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <DataGridTemplateColumn Width="90">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding VPos, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     Width="70"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
             </DataGrid.Columns>
         </DataGrid>
     </Grid>
