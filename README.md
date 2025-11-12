@@ -1,84 +1,73 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Windows;
-using System.Windows.Input;
-using OSDIconFlashMap.Model;
+<!-- 圖片牆 -->
+<ItemsControl x:Name="ic">
+  <!-- 以 WrapPanel 平鋪 -->
+  <ItemsControl.ItemsPanel>
+    <ItemsPanelTemplate>
+      <WrapPanel />
+    </ItemsPanelTemplate>
+  </ItemsControl.ItemsPanel>
 
-namespace OSDIconFlashMap.View
-{
-    /// <summary>
-    /// 圖片牆：
-    /// - 永遠顯示「全部載入的圖片」(options)
-    /// - 只做標示（本列目前選 / 其他列使用），不做篩選、不禁用
-    /// - 允許重複選取
-    /// </summary>
-    public partial class ImagePickerWindow : Window
-    {
-        private readonly List<ImageOption> _all; // 全部圖片（直接吃呼叫端傳進來的全集）
-        public ImageOption Selected { get; private set; } // 對話框回傳結果
+  <!-- 單一圖片卡片樣式 -->
+  <ItemsControl.ItemTemplate>
+    <DataTemplate>
+      <Grid>
+        <!-- 外框：本列目前選中（藍色外框） -->
+        <Border Margin="6"
+                CornerRadius="4"
+                BorderThickness="2">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="BorderBrush" Value="Transparent"/>
+              <Style.Triggers>
+                <!-- 本列目前選的圖（藍框） -->
+                <DataTrigger Binding="{Binding IsCurrentSelected}" Value="True">
+                  <Setter Property="BorderBrush" Value="#2F80ED"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
 
-        public ImagePickerWindow(IEnumerable<ImageOption> options,
-                                 string currentSelectedKey,
-                                 ISet<string> usedByOthersKeys)
-        {
-            InitializeComponent();
+          <StackPanel Width="140" Height="140">
+            <Image Source="{Binding ImagePath}"
+                   Stretch="UniformToFill"
+                   Height="100"/>
+            <TextBlock Text="{Binding Name}"
+                       HorizontalAlignment="Center"
+                       Margin="0,6,0,0"
+                       TextTrimming="CharacterEllipsis"/>
+          </StackPanel>
+        </Border>
 
-            _all = options?.ToList() ?? new List<ImageOption>();
+        <!-- 右上角標籤：其他列使用中（僅提示，不禁用） -->
+        <Border HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,8,8,0"
+                Padding="4,2"
+                Background="#FFF5B5"
+                CornerRadius="3">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsUsedByOthers}" Value="True">
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <TextBlock Text="其他列使用中"
+                     FontSize="10"
+                     Foreground="#7A4B00"
+                     FontWeight="Bold"/>
+        </Border>
+      </Grid>
+    </DataTemplate>
+  </ItemsControl.ItemTemplate>
 
-            // 先清掉舊旗標（同一批 ImageOption 可能被多次用於不同列）
-            foreach (var img in _all)
-            {
-                img.IsUsedByOthers = false;
-                img.IsCurrentSelected = false;
-            }
-
-            // 標示：其他列使用中的圖片（僅視覺提示，仍允許點選）
-            if (usedByOthersKeys != null && usedByOthersKeys.Count > 0)
-            {
-                foreach (var img in _all)
-                {
-                    if (!string.IsNullOrEmpty(img.Key) && usedByOthersKeys.Contains(img.Key))
-                        img.IsUsedByOthers = true;
-                }
-            }
-
-            // 標示：本列目前選的圖片（藍框）
-            if (!string.IsNullOrEmpty(currentSelectedKey))
-            {
-                var hit = _all.FirstOrDefault(x => x.Key == currentSelectedKey);
-                if (hit != null)
-                {
-                    hit.IsCurrentSelected = true;
-                    Selected = hit; // 預設選擇對象（僅供 UI 高亮）
-                }
-            }
-
-            // 永遠顯示「全部圖片」：不做任何 Where/Filter
-            ic.ItemsSource = null;
-            ic.Items.Clear();
-            ic.ItemsSource = _all;
-        }
-
-        /// <summary>
-        /// 點一下就選取（或你保留雙擊也可）
-        /// - 允許重複選（即使該圖已被其他列使用）
-        /// - 只負責回傳結果，行為管控交由外層（本需求允許重複）
-        /// </summary>
-        private void OnPick(object sender, MouseButtonEventArgs e)
-        {
-            var fe = sender as FrameworkElement;
-            var op = fe?.DataContext as ImageOption;
-            if (op == null) return;
-
-            // 更新「本列目前選」視覺高亮（藍框）
-            foreach (var img in _all) img.IsCurrentSelected = false;
-            op.IsCurrentSelected = true;
-
-            Selected = op;      // 對話框回傳這張
-            ic.Items.Refresh(); // 立即更新外框樣式（非必要，但看起來更順）
-
-            DialogResult = true;
-            Close();
-        }
-    }
-}
+  <!-- 點擊事件（允許重複選） -->
+  <ItemsControl.ItemContainerStyle>
+    <Style TargetType="ContentPresenter">
+      <EventSetter Event="MouseLeftButtonUp" Handler="OnPick"/>
+    </Style>
+  </ItemsControl.ItemContainerStyle>
+</ItemsControl>
