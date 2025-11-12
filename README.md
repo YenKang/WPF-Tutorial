@@ -1,68 +1,43 @@
-<Grid>
-  <Grid.RowDefinitions>
-    <RowDefinition Height="Auto"/>
-    <RowDefinition Height="*"/>
-  </Grid.RowDefinitions>
+<!-- ✅ 第二列：OSD_EN Summary 顏色標註版 -->
+<ItemsControl Grid.Row="1" ItemsSource="{Binding Source={StaticResource IconSlotsDesc}}">
+  <ItemsControl.ItemsPanel>
+    <ItemsPanelTemplate>
+      <UniformGrid Columns="30"/>
+    </ItemsPanelTemplate>
+  </ItemsControl.ItemsPanel>
 
-  <!-- 🟦 OSD_EN 摘要表（置於 Header 上方） -->
-  <StackPanel Grid.Row="0" Margin="0,0,0,8">
-    <TextBlock Text="OSD_EN Summary" FontWeight="Bold" Margin="0,0,0,4"/>
+  <ItemsControl.ItemTemplate>
+    <DataTemplate>
+      <!-- 每個小格 -->
+      <Border x:Name="cell"
+              Padding="4" Margin="1"
+              CornerRadius="3"
+              BorderThickness="1"
+              BorderBrush="#D9DEE8"
+              Background="#F7F9FC">
+        <TextBlock Text="{Binding IsOsdEnabled, Converter={StaticResource Bool01}}"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+      </Border>
 
-    <Grid>
-      <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>  <!-- 索引：30..1 -->
-        <RowDefinition Height="Auto"/>  <!-- 數值：1/0 -->
-      </Grid.RowDefinitions>
+      <!-- 🎨 顏色變化 -->
+      <DataTemplate.Triggers>
+        <!-- 有勾 (IsOsdEnabled=True) -->
+        <DataTrigger Binding="{Binding IsOsdEnabled}" Value="True">
+          <Setter TargetName="cell" Property="Background" Value="#2E7D32"/> <!-- 深綠 -->
+          <Setter TargetName="cell" Property="BorderBrush" Value="#2E7D32"/>
+          <Setter TargetName="cell" Property="TextBlock.Foreground" Value="White"/>
+        </DataTrigger>
 
-      <!-- 上排：索引 30..1 -->
-      <ItemsControl Grid.Row="0" ItemsSource="{Binding Source={StaticResource IconSlotsDesc}}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <UniformGrid Columns="30"/>
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <Border BorderBrush="#E1E4EA" BorderThickness="0,0,1,1" Padding="2" Background="#F7F9FC">
-              <TextBlock Text="{Binding IconIndex}" HorizontalAlignment="Center" FontSize="11"/>
-            </Border>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-
-      <!-- 下排：值 1/0（跟著 IsOsdEnabled 即時變） -->
-      <ItemsControl Grid.Row="1" ItemsSource="{Binding Source={StaticResource IconSlotsDesc}}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <UniformGrid Columns="30"/>
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <Border Padding="2" BorderBrush="#E1E4EA" BorderThickness="0,0,1,1">
-              <TextBlock Text="{Binding IsOsdEnabled, Converter={StaticResource Bool01}}"
-                         HorizontalAlignment="Center" FontSize="12" FontWeight="SemiBold">
-                <TextBlock.Style>
-                  <Style TargetType="TextBlock">
-                    <Setter Property="Foreground" Value="#666"/>
-                    <Style.Triggers>
-                      <!-- 勾選時加深顏色 -->
-                      <DataTrigger Binding="{Binding IsOsdEnabled}" Value="True">
-                        <Setter Property="Foreground" Value="#0F7B0F"/>
-                      </DataTrigger>
-                    </Style.Triggers>
-                  </Style>
-                </TextBlock.Style>
-              </TextBlock>
-            </Border>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </Grid>
-  </StackPanel>
-
-  <!-- 你原本的 DataGrid 放這裡 -->
-  <DataGrid Grid.Row="1" ...>
-    <!-- 既有欄位 -->
-  </DataGrid>
-</Grid>
+        <!-- 沒勾 (IsOsdEnabled=False) -->
+        <DataTrigger Binding="{Binding IsOsdEnabled}" Value="False">
+          <Setter TargetName="cell" Property="Background" Value="#ECEFF1"/> <!-- 淺灰 -->
+          <Setter TargetName="cell" Property="BorderBrush" Value="#D0D5DA"/>
+          <Setter TargetName="cell" Property="TextBlock.Foreground" Value="#5A6472"/>
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+  </ItemsControl.ItemTemplate>
+</ItemsControl>
