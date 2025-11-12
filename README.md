@@ -1,16 +1,18 @@
-<!-- ===== OSD_EN Summary（顯示 30→1、純數字） ===== -->
+<!-- 🟦 Row 0：Icon_DL_SEL Summary（由 Image Selection 推得，30→1） -->
 <StackPanel Grid.Row="0" Margin="0,0,0,8">
-  <TextBlock Text="OSD_EN Summary (30 → 1)"
-             FontSize="14" FontWeight="Bold" Foreground="#333"
+  <TextBlock Text="Icon_DL_SEL Summary (30 → 1)"
+             FontSize="14"
+             FontWeight="Bold"
+             Foreground="#333"
              Margin="0,0,0,4"/>
 
-  <Grid>
+  <Grid FlowDirection="RightToLeft">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <!-- 第一排：顯示 IconIndex（1~30） -->
+    <!-- 上排：Icon Index (30→1) -->
     <ItemsControl Grid.Row="0" ItemsSource="{Binding IconSlots}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
@@ -19,7 +21,9 @@
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate>
-          <Border Padding="3" Margin="1" BorderBrush="#D0D5DA" BorderThickness="1" Background="#F8FAFC" CornerRadius="2">
+          <Border Padding="3" Margin="1"
+                  BorderBrush="#D0D5DA" BorderThickness="1"
+                  Background="#F8FAFC" CornerRadius="2">
             <TextBlock Text="{Binding IconIndex}"
                        HorizontalAlignment="Center"
                        FontSize="12"
@@ -29,7 +33,7 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
-    <!-- 第二排：顯示 OSD_EN 值（0/1） -->
+    <!-- 下排：是否有選圖（Icon_DL_SEL → 1 / 0） -->
     <ItemsControl Grid.Row="1" ItemsSource="{Binding IconSlots}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
@@ -38,8 +42,10 @@
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate>
-          <Border Padding="3" Margin="1" BorderBrush="#D0D5DA" BorderThickness="1" Background="#FFFFFF" CornerRadius="2">
-            <TextBlock Text="{Binding IsOsdEnabled, Converter={StaticResource Bool01}}"
+          <Border Padding="3" Margin="1"
+                  BorderBrush="#D0D5DA" BorderThickness="1"
+                  Background="White" CornerRadius="2">
+            <TextBlock Text="{Binding IconDlSel, Converter={StaticResource Bool01}}"
                        FontSize="12"
                        FontWeight="SemiBold"
                        HorizontalAlignment="Center"
