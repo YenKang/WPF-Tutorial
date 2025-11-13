@@ -1,22 +1,42 @@
-/// <summary>
-/// 給 OSD ICON SELECTION 用的候選圖片清單。
-/// ✅ 不去除重複：
-///    例如 Icon#1=image2, Icon#2=image1, Icon#3=image1
-///    回傳順序就是 [image2, image1, image1]。
-/// </summary>
-public List<ImageOption> GetOsdCandidateImages()
+public void LoadImagesFromFolder(string relativeFolder)
 {
-    // 1. 找出所有「有選 Image」的 Icon 列
-    var hasImageSlots = IconSlots
-        .Where(slot => slot.SelectedImage != null)
-        .OrderBy(slot => slot.IconIndex);   // 依 Icon 編號排序，方便你對照
+    // 以執行檔資料夾為基準
+    var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+    var folder  = Path.Combine(baseDir, relativeFolder);
 
-    // 2. 直接把 SelectedImage 丟出來
-    //    不做 Distinct / 不做 GroupBy
-    var list = hasImageSlots
-        .Select(slot => slot.SelectedImage)
-        .Where(img => img != null)
+    if (!Directory.Exists(folder))
+        return;
+
+    // ✅ 1. 只根據「副檔名」找圖，不管檔名長怎樣
+    var filePatterns = new[] { "*.png", "*.jpg", "*.jpeg", "*.bmp" };
+
+    var files = filePatterns
+        .SelectMany(p => Directory.EnumerateFiles(folder, p, SearchOption.TopDirectoryOnly))
+        // ✅ 2. 依檔名排序，讓結果穩定（例如 image1, image2, …）
+        .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
         .ToList();
 
-    return list;
+    // ✅ 3. 把檔案轉成 ImageOption 清單
+    var list = new List<ImageOption>();
+    int id = 1;
+
+    foreach (var path in files)
+    {
+        var nameWithoutExt = Path.GetFileNameWithoutExtension(path);
+
+        list.Add(new ImageOption
+        {
+            Id   = id++,
+            Name = nameWithoutExt,           // 顯示名稱（你可視需要調整）
+            Key  = nameWithoutExt,           // Key：這邊先用檔名（不含副檔名）
+
+            // 若你有 thumbnail 規則，可照之前約定：
+            ThumbnailKey = $"{nameWithoutExt}_thumbnail",
+
+            ImagePath = path                 // 圖片實際路徑
+        });
+    }
+
+    // ✅ 4. 丟給原本的 LoadImages()，統一更新 Images
+    LoadImages(list.ToArray());
 }
