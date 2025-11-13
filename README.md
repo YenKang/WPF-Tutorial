@@ -1,8 +1,18 @@
-<Grid Margin="16">
-    <Grid.RowDefinitions>
-        <RowDefinition Height="Auto"/>  <!-- Row 0: IC Select (新加) -->
-        <RowDefinition Height="Auto"/>  <!-- Row 1: ICON_DL_SEL Summary -->
-        <RowDefinition Height="Auto"/>  <!-- Row 2: OSD_EN Summary -->
-        <RowDefinition Height="*"/>     <!-- Row 3: DataGrid 9欄 -->
-        <RowDefinition Height="Auto"/>  <!-- Row 4: OK / Cancel -->
-    </Grid.RowDefinitions>
+    <!-- ===== Row 0：IC Select 切換 Primary / L1 / L2 / L3 ===== -->
+    <StackPanel Grid.Row="0"
+                Orientation="Horizontal"
+                Margin="0,0,0,8">
+        <!-- 左邊標籤 -->
+        <TextBlock Text="IC Select:"
+                   FontSize="14"
+                   VerticalAlignment="Center"/>
+
+        <!-- 右邊 ComboBox：綁定 ViewModel.AvailableICs + SelectedIC -->
+        <ComboBox Width="120"
+                  Margin="8,0,0,0"
+                  ItemsSource="{Binding AvailableICs}"
+                  SelectedItem="{Binding SelectedIC}"
+                  HorizontalAlignment="Left">
+            <!-- 預設直接用 enum.ToString()：Primary / L1 / L2 / L3 -->
+        </ComboBox>
+    </StackPanel>
