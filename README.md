@@ -1,31 +1,60 @@
 using System.Collections.Generic;
+using OSDIconFlashMap.Model;
 
-namespace OSDIconFlashMap.Model
+public IconOSDExportRoot BuildExportModel()
 {
-    // JSON root
-    public class IconOSDExportRoot
+    var root = new IconOSDExportRoot();
+    root.Ics = new List<IconOSDExportIC>();
+
+    ICType[] icList = new ICType[]
     {
-        public List<IconOSDExportIC> Ics { get; set; }
+        ICType.Primary, ICType.L1, ICType.L2, ICType.L3
+    };
+
+    for (int i = 0; i < icList.Length; i++)
+    {
+        ICType ic = icList[i];
+
+        // 1. 找這顆 IC 的資料
+        List<IconSlotModel> slots;
+        if (!_icSlotStorage.TryGetValue(ic, out slots))
+        {
+            slots = CreateDefaultIconSlots();
+            _icSlotStorage[ic] = slots;
+        }
+
+        // 2. 準備匯出 IC 區塊
+        var icExport = new IconOSDExportIC();
+        icExport.Ic = ic.ToString();
+        icExport.Slots = new List<IconOSDExportSlot>();
+
+        // 3. 將每列轉成 JSON slot
+        for (int s = 0; s < slots.Count; s++)
+        {
+            var src = slots[s];
+            var dst = new IconOSDExportSlot();
+
+            dst.IconIndex = src.IconIndex;
+
+            if (src.SelectedImage != null)
+                dst.FlashImageName = src.SelectedImage.Name;
+
+            dst.SramStartAddress = src.SramStartAddress;
+            dst.OsdIndex = src.OsdIndex;
+
+            if (src.OsdSelectedImage != null)
+                dst.OSDIconName = src.OsdSelectedImage.Name;
+
+            dst.OsdEn = src.IsOsdEnabled;
+            dst.TtaleEn = src.IsTtaleEnabled;
+            dst.HPos = src.HPos;
+            dst.VPos = src.VPos;
+
+            icExport.Slots.Add(dst);
+        }
+
+        root.Ics.Add(icExport);
     }
 
-    // Each IC block
-    public class IconOSDExportIC
-    {
-        public string Ic { get; set; }
-        public List<IconOSDExportSlot> Slots { get; set; }
-    }
-
-    // One row (Icon#1 ~ Icon#30)
-    public class IconOSDExportSlot
-    {
-        public int IconIndex { get; set; }
-        public string FlashImageName { get; set; }
-        public string SramStartAddress { get; set; }
-        public int OsdIndex { get; set; }
-        public string OSDIconName { get; set; }
-        public bool OsdEn { get; set; }
-        public bool TtaleEn { get; set; }
-        public int HPos { get; set; }
-        public int VPos { get; set; }
-    }
+    return root;
 }
