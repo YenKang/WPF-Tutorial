@@ -1,26 +1,32 @@
-using Microsoft.Win32;
-using System.IO;
-
-private void BtnLoadImages_Click(object sender, RoutedEventArgs e)
+public void LoadImagesFromFiles(IEnumerable<string> filePaths)
 {
-    var vm = this.DataContext as IconToImageMapViewModel;
-    if (vm == null)
+    var list = new List<string>();
+    foreach (var file in filePaths)
     {
-        MessageBox.Show("ViewModel 尚未初始化。");
-        return;
+        if (File.Exists(file))
+            list.Add(file);
     }
 
-    var dlg = new OpenFileDialog();
-    dlg.Title = "選擇圖片檔案";
-    dlg.Multiselect = true;
-    dlg.Filter = "Image Files (*.bmp;*.jpg;*.jpeg;*.png)|*.bmp;*.jpg;*.jpeg;*.png";
-
-    var result = dlg.ShowDialog(this);
-    if (result != true)
+    if (list.Count == 0)
         return;
 
-    vm.LoadImagesFromFiles(dlg.FileNames);
+    list.Sort(StringComparer.OrdinalIgnoreCase);
 
-    // 如想 Debug
-    // Debug.WriteLine($"Loaded Images Count = {vm.Images.Count}");
+    var opts = new List<ImageOption>();
+    int id = 1;
+
+    foreach (var path in list)
+    {
+        var name = Path.GetFileNameWithoutExtension(path);
+        opts.Add(new ImageOption
+        {
+            Id = id++,
+            Name = name,
+            Key = name,
+            ThumbnailKey = name + "_thumbnail",
+            ImagePath = path
+        });
+    }
+
+    LoadImages(opts.ToArray());
 }
