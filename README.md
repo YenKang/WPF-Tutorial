@@ -1,43 +1,52 @@
-/// <summary>
-/// 根據 FlashButtonList 產生圖片牆要用的 ImageOption 清單，
-/// 等於是「把 flashButtonList[i].ImageFilePath 全部收集起來」
-/// 轉成 Images（ObservableCollection&lt;ImageOption&gt;）。
-/// </summary>
-public void LoadImagesFromFlashButtons(IEnumerable<FlashButton> flashButtons)
+public partial class IconToImageMapWindow : Window
 {
-    if (flashButtons == null)
-        return;
+    private List<FlashButton> _flashButtonList;
 
-    // 1️⃣ 先準備一個暫存 list，收集要顯示的 ImageOption
-    var options = new List<ImageOption>();
-    int id = 1;
-
-    foreach (var fb in flashButtons)
+    public IconToImageMapWindow(IEnumerable<dynamic> ButtonsList)
     {
-        // 忽略掉沒有路徑或檔案不存在的
-        if (fb == null)
-            continue;
+        InitializeComponent();
 
-        if (string.IsNullOrEmpty(fb.ImageFilePath))
-            continue;
+        // 1️⃣ 先把 ButtonsList 轉成 FlashButtonList
+        _flashButtonList = new List<FlashButton>();
 
-        if (!File.Exists(fb.ImageFilePath))
-            continue;
+        foreach (dynamic b in ButtonsList)
+        {
+            _flashButtonList.Add(new FlashButton
+            {
+                ImageFilePath     = b.BMPFilePath,
+                FlashStartAddress = b.ICON_SRAM_ADDR,
+                IconSramByteSize  = b.ICON_SRAM_ByteSize
+            });
+        }
 
-        // 從路徑取出 檔名（不含副檔名），當作顯示名稱＆Key
-        string nameWithoutExt = Path.GetFileNameWithoutExtension(fb.ImageFilePath);
+        // 2️⃣ 取得 / 建立 ViewModel，並設定 DataContext
+        IconToImageMapViewModel vm;
+        if (this.DataContext is IconToImageMapViewModel existVm)
+        {
+            vm = existVm;
+        }
+        else
+        {
+            vm = new IconToImageMapViewModel();
+            this.DataContext = vm;
+        }
 
-        var opt = new ImageOption();
-        opt.Id   = id++;                  // 流水號（1,2,3,...）
-        opt.Name = nameWithoutExt;        // 顯示名稱，例如 image1
-        opt.Key  = nameWithoutExt;        // Key：先用檔名，之後要改也容易
-        opt.ThumbnailKey = nameWithoutExt + "_thumbnail"; // 你之前的縮圖命名規則
-        opt.ImagePath    = fb.ImageFilePath;              // 真正圖片路徑
+        // 3️⃣ 初始化 IconSlots（如果你還是需要 30 列）
+        if (vm.IconSlots.Count == 0)
+        {
+            vm.InitIconSlots();
+        }
 
-        options.Add(opt);
+        // ❌ 之前是用固定資料夾載入假圖，現在先不要：
+        // if (vm.Images.Count == 0)
+        // {
+        //     vm.LoadImagesFromFolder(@"Assets\TestIcons");
+        // }
+
+        // ✅ 4️⃣ 改成用 FlashButtonList 當圖片牆素材來源
+        if (_flashButtonList.Count > 0)
+        {
+            vm.LoadImagesFromFlashButtons(_flashButtonList);
+        }
     }
-
-    // 2️⃣ 呼叫你原本的 LoadImages(...)，統一更新 Images
-    //    這樣不用重複寫「清空、Add、RaisePropertyChanged」等邏輯
-    LoadImages(options.ToArray());
 }
