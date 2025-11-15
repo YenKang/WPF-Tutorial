@@ -1,19 +1,29 @@
-using System;
-
-namespace OSDIconFlashMap.Model
+public IconToImageMapWindow(IEnumerable<dynamic> ButtonsList)
 {
-    /// <summary>
-    /// FlashButton = 就是最終要寫進 Flash Layout 的資料模型
-    /// </summary>
-    public class FlashButton
+    InitializeComponent();
+
+    FlashButtonList = new List<FlashButton>();
+
+    int index = 0;
+    foreach (dynamic b in ButtonsList)
     {
-        /// <summary>圖片檔案完整路徑，例如 C:\Icons\image1.png</summary>
-        public string ImageFilePath { get; set; }
+        // 建立一筆 FlashButton 記錄
+        var fb = new FlashButton
+        {
+            ImageFilePath      = b.BMPFilePath,        // 圖片實際路徑
+            FlashStartAddress  = b.ICON_SRAM_ADDR,     // 計算好的 Start Address
+            IconSramByteSize   = b.ICON_SRAM_ByteSize  // 計算好的 ByteSize
+        };
 
-        /// <summary>決定此圖要燒錄到 Flash 的 SRAM 起始位址</summary>
-        public uint FlashStartAddress { get; set; }
-
-        /// <summary>此圖編碼成 IC 專用格式後的 Byte Size</summary>
-        public uint IconSramByteSize { get; set; }
+        FlashButtonList.Add(fb);
+        index++;
     }
+}
+
+=====
+
+foreach (var fb in FlashButtonList)
+{
+    Debug.WriteLine(
+        $"FlashButton => Path={fb.ImageFilePath}, Start=0x{fb.FlashStartAddress:X}, Size={fb.IconSramByteSize}");
 }
