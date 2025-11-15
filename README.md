@@ -1,29 +1,43 @@
-public IconToImageMapWindow(IEnumerable<dynamic> ButtonsList)
+/// <summary>
+/// 根據 FlashButtonList 產生圖片牆要用的 ImageOption 清單，
+/// 等於是「把 flashButtonList[i].ImageFilePath 全部收集起來」
+/// 轉成 Images（ObservableCollection&lt;ImageOption&gt;）。
+/// </summary>
+public void LoadImagesFromFlashButtons(IEnumerable<FlashButton> flashButtons)
 {
-    InitializeComponent();
+    if (flashButtons == null)
+        return;
 
-    FlashButtonList = new List<FlashButton>();
+    // 1️⃣ 先準備一個暫存 list，收集要顯示的 ImageOption
+    var options = new List<ImageOption>();
+    int id = 1;
 
-    int index = 0;
-    foreach (dynamic b in ButtonsList)
+    foreach (var fb in flashButtons)
     {
-        // 建立一筆 FlashButton 記錄
-        var fb = new FlashButton
-        {
-            ImageFilePath      = b.BMPFilePath,        // 圖片實際路徑
-            FlashStartAddress  = b.ICON_SRAM_ADDR,     // 計算好的 Start Address
-            IconSramByteSize   = b.ICON_SRAM_ByteSize  // 計算好的 ByteSize
-        };
+        // 忽略掉沒有路徑或檔案不存在的
+        if (fb == null)
+            continue;
 
-        FlashButtonList.Add(fb);
-        index++;
+        if (string.IsNullOrEmpty(fb.ImageFilePath))
+            continue;
+
+        if (!File.Exists(fb.ImageFilePath))
+            continue;
+
+        // 從路徑取出 檔名（不含副檔名），當作顯示名稱＆Key
+        string nameWithoutExt = Path.GetFileNameWithoutExtension(fb.ImageFilePath);
+
+        var opt = new ImageOption();
+        opt.Id   = id++;                  // 流水號（1,2,3,...）
+        opt.Name = nameWithoutExt;        // 顯示名稱，例如 image1
+        opt.Key  = nameWithoutExt;        // Key：先用檔名，之後要改也容易
+        opt.ThumbnailKey = nameWithoutExt + "_thumbnail"; // 你之前的縮圖命名規則
+        opt.ImagePath    = fb.ImageFilePath;              // 真正圖片路徑
+
+        options.Add(opt);
     }
-}
 
-=====
-
-foreach (var fb in FlashButtonList)
-{
-    Debug.WriteLine(
-        $"FlashButton => Path={fb.ImageFilePath}, Start=0x{fb.FlashStartAddress:X}, Size={fb.IconSramByteSize}");
+    // 2️⃣ 呼叫你原本的 LoadImages(...)，統一更新 Images
+    //    這樣不用重複寫「清空、Add、RaisePropertyChanged」等邏輯
+    LoadImages(options.ToArray());
 }
