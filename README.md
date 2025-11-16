@@ -1,20 +1,18 @@
-namespace OSDIconFlashMap.Model
+public class IconToImageMapViewModel : ViewModelBase
 {
-    /// <summary>
-    /// 一筆「OSD# 使用哪一張 Icon 圖」的資料
-    /// 只關心 OSD 編號與 OSD Icon 名稱
-    /// </summary>
-    public class OSDICButton
-    {
-        /// <summary>
-        /// OSD 編號 (1 ~ 30)
-        /// </summary>
-        public int OSDIndex { get; set; }
+    // 你原本的欄位...
 
-        /// <summary>
-        /// OSD Icon 的名稱
-        /// （來源：OSD Icon Selection 選到的圖片名稱）
-        /// </summary>
-        public string OsdIconName { get; set; }
+    /// <summary>
+    /// 依 OSD#1~30 排好的「OSD → Icon」清單
+    /// 來源是畫面右側 OSD Icon Selection
+    /// </summary>
+    public List<OSDICButton> OSDICButtonList { get; private set; }
+
+    public IconToImageMapViewModel()
+    {
+        IconSlots = new ObservableCollection<IconSlotModel>();
+        OSDICButtonList = new List<OSDICButton>();
     }
+
+    // ...
 }
