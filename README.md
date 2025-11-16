@@ -1,58 +1,32 @@
-private void OnIconSlotPropertyChanged(object sender, PropertyChangedEventArgs e)
+// === 給 UI TextBox 使用：三位 HEX，可手動輸入 ===
+public string FCNT2_Text
 {
-    // 1）Image Selection 變化 → 重算 SRAM
-    if (e.PropertyName == nameof(IconSlotModel.SelectedImage))
+    get
     {
-        RecalculateSramAddressesByImageSize();
+        // 例如 0x1E → "01E"
+        return FCNT2_Value.ToString("X3");
     }
-
-    // 2）OSD Icon Selection 變化 → 重建 OSDICButtonList
-    if (e.PropertyName == nameof(IconSlotModel.OsdSelectedImage))
+    set
     {
-        RebuildOsdIcButtonList();
-    }
-}
+        if (string.IsNullOrWhiteSpace(value))
+            return;
 
-=======
+        var s = value.Trim();
 
-/// <summary>
-/// 重新統計目前畫面上「每一個 OSD# 用哪一張 Icon」
-/// 1. 清空 OSDICButtonList
-/// 2. 依 OSDIndex 1→30 排序 IconSlots
-/// 3. 只處理有選 OSD Icon 的列
-/// </summary>
-public void RebuildOsdIcButtonList()
-{
-    if (OSDICButtonList == null)
-        OSDICButtonList = new List<OSDICButton>();
-    else
-        OSDICButtonList.Clear();
-
-    // 依 OSD#1~30 排序（右側 OSD # 欄位）
-    var orderedSlots = IconSlots
-        .OrderBy(s => s.OsdIndex)
-        .ToList();
-
-    foreach (var slot in orderedSlots)
-    {
-        if (slot.OsdSelectedImage == null)
-            continue;   // 沒選 OSD Icon 的 OSD# 就略過
-
-        var item = new OSDICButton
+        // 嘗試用 16 進位解析
+        if (!int.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var parsed))
         {
-            OSDIndex    = slot.OsdIndex,
-            OsdIconName = slot.OsdSelectedImage.Name
-        };
+            // 非法字串（例如 ZZZ）就忽略
+            return;
+        }
 
-        OSDICButtonList.Add(item);
-    }
+        // 限制在 min/max 範圍
+        parsed = Clamp(parsed, _min, _max);
 
-    // Debug 輸出，方便你在 Output 視窗確認
-    System.Diagnostics.Debug.WriteLine("==== OSDICButtonList ====");
-    foreach (var b in OSDICButtonList)
-    {
-        System.Diagnostics.Debug.WriteLine(
-            $"OSD#{b.OSDIndex:00} -> {b.OsdIconName}");
+        // 用你原本的 helper，把值拆回 D2/D1/D0
+        SetFromValue(parsed);
+
+        // 通知 Text 也更新成標準格式（X3）
+        OnPropertyChanged(nameof(FCNT2_Text));
     }
-    System.Diagnostics.Debug.WriteLine("==== END ====");
 }
