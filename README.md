@@ -1,10 +1,70 @@
-refactor(osd-sram): 重構 SRAM 位址計算機制，改為依據 Image Selected 的順序動態生成
+using System.Collections.Generic;
 
-• 新增 SramButton Model + SramButtonList，用於儲存每個 SRAM Slot 對應的圖片資訊
-• SRAM 位址計算改為依「已選取圖片的順序」產生 SRAM1、SRAM2、SRAM3…
-• 未選圖片（SelectedImage == null）不再佔用 SRAM Slot，僅顯示 "-"
-• 移除 ImageOption.SramByteSize，統一使用 _imageSizeMap[key] 取得圖片 Byte Size
-• IconSlotModel.SelectedImage 變更時會自動觸發 SRAM 全表重算
-• LoadImagesFromFlashButtons 改為建立 Images 清單並同步建立 _imageSizeMap
-• 新增 SRAM Mapping Debug Dump，方便驗證地址是否正確
-• 清理冗餘程式碼，使圖片來源與 SRAM 計算邏輯更加一致、可維護
+namespace OSDIconFlashMap.Model
+{
+    /// <summary>
+    /// JSON 根節點：
+    /// {
+    ///   "ics": [ ... ]
+    /// }
+    /// </summary>
+    public class IconOSDExportRoot
+    {
+        public List<IconOSDExportIC> Ics { get; set; }
+
+        public IconOSDExportRoot()
+        {
+            Ics = new List<IconOSDExportIC>();
+        }
+    }
+
+    /// <summary>
+    /// 每一個 IC：
+    /// {
+    ///   "ic": "Primary",
+    ///   "icons": [...],
+    ///   "osds": [...]
+    /// }
+    /// </summary>
+    public class IconOSDExportIC
+    {
+        public string Ic { get; set; }
+
+        /// <summary>Flash ICON 區</summary>
+        public List<ExportIcon> Icons { get; set; }
+
+        /// <summary>OSD 區</summary>
+        public List<ExportOsd> Osds { get; set; }
+
+        public IconOSDExportIC()
+        {
+            Icons = new List<ExportIcon>();
+            Osds  = new List<ExportOsd>();
+        }
+    }
+
+    /// <summary>
+    /// Icons[]：Flash/SRAM ICON 資料
+    /// </summary>
+    public class ExportIcon
+    {
+        public int    IconIndex        { get; set; }
+        public string FlashImageName   { get; set; }   // 可能為 null
+        public string SramStartAddress { get; set; }   // "0x000000" or "-"
+    }
+
+    /// <summary>
+    /// Osds[]：OSD 設定資料
+    /// </summary>
+    public class ExportOsd
+    {
+        public int    OsdIndex    { get; set; }
+        public string OsdIconName { get; set; }   // 可能為 null
+
+        public bool OsdEn   { get; set; }
+        public bool TtaleEn { get; set; }
+
+        public int HPos { get; set; }
+        public int VPos { get; set; }
+    }
+}
