@@ -1,24 +1,16 @@
-using OSDIconFlashMap.Model;
-using System.Collections.Generic;
-using System.Linq;
-
-// ...
-
-public class IconToImageMapViewModel : ViewModelBase
+// 檔案：Model/SramButton.cs
+namespace OSDIconFlashMap.Model
 {
-    // 已有：IconSlots, Images, _imageSizeMap ...
-
-    // 1️⃣ SRAMButton 的集合，之後要給 OSD 選圖用
-    private readonly List<SRAMButton> _sramButtonList = new List<SRAMButton>();
-
     /// <summary>
-    /// 目前依照「有選圖的 Icon」所產生的 SRAM slot 列表。
-    /// 排序：照 IconIndex 由小到大 = SRAM1, SRAM2, SRAM3...
+    /// 對應 SRAM1、SRAM2… 的一筆記錄
+    /// （順序 = 畫面上有選圖的 Icon 出現順序）
     /// </summary>
-    public List<SRAMButton> SramButtonList
+    public class SramButton
     {
-        get { return _sramButtonList; }
+        public int  SramIndex      { get; set; }  // SRAM1=1, SRAM2=2…
+        public int  IconIndex      { get; set; }  // 來源的 Icon#（1~30）
+        public string ImageName    { get; set; }  // image1 / 左轉向燈…
+        public uint StartAddress   { get; set; }  // SRAM Start Address（數值）
+        public uint ByteSize       { get; set; }  // 這張圖實際佔用的 byte 數
     }
-
-    // ... 其他程式碼 (IconSlots, Images, LoadImagesFromFlashButtons 等)
 }
