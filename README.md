@@ -1,32 +1,34 @@
-public void InitIconSlots()
+// IconToImageMapViewModel.cs
+
+public void RecalculateSramAddressesByImageSize()
 {
-    IconSlots.Clear();
+    // 1) 先找出「有選圖片」的列，照 IconIndex 排序
+    var selectedSlots = IconSlots
+        .Where(s => s.SelectedImage != null)
+        .OrderBy(s => s.IconIndex)
+        .ToList();
 
-    for (int i = 1; i <= 30; i++)
+    uint runningAddr = 0;
+
+    // 2) 依序替每一個「有選圖」的 slot 配一個 SRAM 位址
+    foreach (var slot in selectedSlots)
     {
-        // 1) 先 new 一個 slot，把原本初始化的欄位都塞好
-        var slot = new IconSlotModel
-        {
-            IconIndex          = i,
-            SelectedImage      = null,  // 未選
-            SramStartAddress   = "-",   // 初始全部顯示 "-"
-            OsdIndex           = i,
-            IsOsdEnabled       = false, // 未啟用
-            IsOsdSramCrcEnabled= false, // 未啟用
-            IsTtaleEnabled     = false, // 未啟用
-            HPos               = 1,
-            VPos               = 1,
-        };
+        // 2-1) 設定這一列在畫面上要顯示的 SRAM 位址
+        slot.SramStartAddress = string.Format("0x{0:X6}", runningAddr);
 
-        // 2) ★關鍵：讓這個 slot 知道「它的 ViewModel 是誰」
-        //    之後 SelectedImage 被改時，就能呼叫
-        //    OwnerViewModel.RecalculateSramAddressesByImageSize()
-        slot.OwnerViewModel = this;
+        // 2-2) 取得這張圖片佔用的 Byte 數，往後推
+        //     建議 ByteSize 放在 ImageOption 裡（你從 FlashButtonList 轉進來時一起塞）
+        uint size = slot.SelectedImage.ByteSize;
 
-        // 3) 加入集合裡
-        IconSlots.Add(slot);
+        runningAddr += size;
     }
 
-    // 4) 通知 UI：IconSlots 內容已更新
-    RaisePropertyChanged(nameof(IconSlots));
+    // 3) 沒選圖的列，全部顯示 "-"
+    foreach (var slot in IconSlots.Where(s => s.SelectedImage == null))
+    {
+        slot.SramStartAddress = "-";
+    }
+
+    // 4) 附送：Debug log，方便你在 Output 視窗看結果
+    DumpSramMap();
 }
