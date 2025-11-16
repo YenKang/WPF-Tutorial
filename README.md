@@ -1,18 +1,14 @@
-public class IconToImageMapViewModel : ViewModelBase
+private void OnIconSlotPropertyChanged(object sender, PropertyChangedEventArgs e)
 {
-    // 你原本的欄位...
-
-    /// <summary>
-    /// 依 OSD#1~30 排好的「OSD → Icon」清單
-    /// 來源是畫面右側 OSD Icon Selection
-    /// </summary>
-    public List<OSDICButton> OSDICButtonList { get; private set; }
-
-    public IconToImageMapViewModel()
+    // 1）Image Selection 變化 → 重算 SRAM
+    if (e.PropertyName == nameof(IconSlotModel.SelectedImage))
     {
-        IconSlots = new ObservableCollection<IconSlotModel>();
-        OSDICButtonList = new List<OSDICButton>();
+        RecalculateSramAddressesByImageSize();
     }
 
-    // ...
+    // 2）OSD Icon Selection 變化 → 重建 OSDICButtonList
+    if (e.PropertyName == nameof(IconSlotModel.OsdSelectedImage))
+    {
+        RebuildOsdIcButtonList();
+    }
 }
