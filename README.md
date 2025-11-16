@@ -1,70 +1,71 @@
-using System.Collections.Generic;
-
-namespace OSDIconFlashMap.Model
+public IconOSDExportRoot BuildExportModel()
 {
-    /// <summary>
-    /// JSON 根節點：
-    /// {
-    ///   "ics": [ ... ]
-    /// }
-    /// </summary>
-    public class IconOSDExportRoot
-    {
-        public List<IconOSDExportIC> Ics { get; set; }
+    // 1. 建立根節點
+    var root = new IconOSDExportRoot();
+    root.Ics = new List<IconOSDExportIC>();
 
-        public IconOSDExportRoot()
+    // 2. IC 列表
+    ICType[] icList = new ICType[]
+    {
+        ICType.Primary, ICType.L1, ICType.L2, ICType.L3
+    };
+
+    for (int i = 0; i < icList.Length; i++)
+    {
+        ICType ic = icList[i];
+
+        // 2-1. 找出這顆 IC 的 slot（若未建立 → 建一份預設）
+        List<IconSlotModel> slots;
+        if (!_icSlotStorage.TryGetValue(ic, out slots))
         {
-            Ics = new List<IconOSDExportIC>();
+            slots = CreateDefaultIconSlots();
+            _icSlotStorage[ic] = slots;
         }
-    }
 
-    /// <summary>
-    /// 每一個 IC：
-    /// {
-    ///   "ic": "Primary",
-    ///   "icons": [...],
-    ///   "osds": [...]
-    /// }
-    /// </summary>
-    public class IconOSDExportIC
-    {
-        public string Ic { get; set; }
+        // 2-2. 建立 IC 區塊
+        var icExport = new IconOSDExportIC();
+        icExport.Ic    = ic.ToString();
+        icExport.Icons = new List<ExportIcon>();
+        icExport.Osds  = new List<ExportOsd>();
 
-        /// <summary>Flash ICON 區</summary>
-        public List<ExportIcon> Icons { get; set; }
-
-        /// <summary>OSD 區</summary>
-        public List<ExportOsd> Osds { get; set; }
-
-        public IconOSDExportIC()
+        // 3. 每一列 slot → 塞入 Icons[] & Osds[]
+        for (int s = 0; s < slots.Count; s++)
         {
-            Icons = new List<ExportIcon>();
-            Osds  = new List<ExportOsd>();
+            var src = slots[s];
+
+            // ----- Icons[] 部分 -----
+            var iconItem = new ExportIcon();
+            iconItem.IconIndex        = src.IconIndex;
+            iconItem.FlashImageName   = NormalizeNameOrNull(src.SelectedImageName);
+            iconItem.SramStartAddress = src.SramStartAddress;
+
+            icExport.Icons.Add(iconItem);
+
+            // ----- Osds[] 部分 -----
+            var osdItem = new ExportOsd();
+            osdItem.OsdIndex    = src.OsdIndex;
+            osdItem.OsdIconName = NormalizeNameOrNull(src.OsdSelectedImageName);
+            osdItem.OsdEn       = src.IsOsdEnabled;
+            osdItem.TtaleEn     = src.IsTtaleEnabled;
+            osdItem.HPos        = src.HPos;
+            osdItem.VPos        = src.VPos;
+
+            icExport.Osds.Add(osdItem);
         }
+
+        // 加入 root
+        root.Ics.Add(icExport);
     }
 
-    /// <summary>
-    /// Icons[]：Flash/SRAM ICON 資料
-    /// </summary>
-    public class ExportIcon
-    {
-        public int    IconIndex        { get; set; }
-        public string FlashImageName   { get; set; }   // 可能為 null
-        public string SramStartAddress { get; set; }   // "0x000000" or "-"
-    }
+    return root;
+}
 
-    /// <summary>
-    /// Osds[]：OSD 設定資料
-    /// </summary>
-    public class ExportOsd
-    {
-        public int    OsdIndex    { get; set; }
-        public string OsdIconName { get; set; }   // 可能為 null
-
-        public bool OsdEn   { get; set; }
-        public bool TtaleEn { get; set; }
-
-        public int HPos { get; set; }
-        public int VPos { get; set; }
-    }
+/// <summary>
+/// 把 "未選擇" 改成 null
+/// </summary>
+private static string NormalizeNameOrNull(string name)
+{
+    if (string.IsNullOrEmpty(name)) return null;
+    if (name == "未選擇") return null;
+    return name;
 }
