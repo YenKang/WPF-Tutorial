@@ -1,37 +1,59 @@
-// IconToImageMapWindow.xaml.cs
-private readonly List<FlashButton> _flashButtonList;
+using System.Diagnostics;
+using System.Linq;
 
-public IconToImageMapWindow(IEnumerable<dynamic> buttonsList)
+// 3️⃣ 重新計算所有列的 SRAM Start Address
+public void RecalculateSramAddressesByImageSize()
 {
-    InitializeComponent();
-
-    // 建立 FlashButtonList（你之前已經有）
-    _flashButtonList = new List<FlashButton>();
-    foreach (dynamic b in buttonsList)
+    // 1. 先把全部列的 SramStartAddress 清成 "-"
+    foreach (var slot in IconSlots)
     {
-        var fb = new FlashButton
+        slot.SramStartAddress = "-";
+    }
+
+    // 2. 把「有選圖片」的列抓出來，照 IconIndex 排序
+    var selectedSlots = IconSlots
+        .Where(s => s.SelectedImage != null)
+        .OrderBy(s => s.IconIndex)
+        .ToList();
+
+    // 3. SRAM 位址從 0 開始累加
+    uint currentAddr = 0;
+
+    foreach (var slot in selectedSlots)
+    {
+        // 3-1. 取出這列圖片的 key，例如 "image1"
+        var img = slot.SelectedImage;
+        var key = img.Name;     // 或 img.Key，看你 UI 綁哪一個
+
+        // 3-2. 從 _imageSizeMap 找出這張圖的 byte size
+        uint size;
+        if (!_imageSizeMap.TryGetValue(key, out size))
         {
-            ImageFilePath    = b.BMPFilePath,
-            FlashStartAddress= b.ICON_SRAM_ADDR,
-            IconSramByteSize = b.ICON_SRAM_ByteSize
-        };
-        _flashButtonList.Add(fb);
+            // 找不到就當 0，避免程式當掉
+            size = 0;
+        }
+
+        // 3-3. 把目前累積位址填回這一列
+        slot.SramStartAddress = string.Format("0x{0:X6}", currentAddr);
+
+        // 3-4. 位址往後推：加上這張圖的 SRAM byte size
+        currentAddr += size;
     }
 
-    // 取得 / 建立 VM
-    var vm = this.DataContext as IconToImageMapViewModel;
-    if (vm == null)
+    // Debug 用：把整張表 dump 出來
+    Debug.WriteLine("==== SRAM MAP DUMP ====");
+    foreach (var slot in IconSlots)
     {
-        vm = new IconToImageMapViewModel();
-        this.DataContext = vm;
+        var imgName = slot.SelectedImage == null
+            ? "未選擇"
+            : slot.SelectedImage.Name;
+
+        Debug.WriteLine(
+            string.Format(
+                "Icon#{0:00} | Img = {1} | SRAM = {2}",
+                slot.IconIndex,
+                imgName,
+                slot.SramStartAddress));
     }
-
-    if (vm.IconSlots.Count == 0)
-        vm.InitIconSlots();
-
-    // ✅ 用 FlashButton 來載入圖片 + 建立 _imageSizeMap
-    vm.LoadImagesFromFlashButtons(_flashButtonList);
-
-    // ⚠️ 等一下 Step 3 會在這裡再加一行：訂閱 SelectedImage 變更
-    vm.HookSlotEvents();
+    Debug.WriteLine("==== END SRAM MAP ====");
 }
