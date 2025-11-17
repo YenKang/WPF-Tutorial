@@ -88,6 +88,29 @@ public void LoadFrom(object jsonConfig)
 }
 ```
 
+```
+private static int ReadHex(JObject obj, string name, int fallback)
+{
+    if (obj == null) return fallback;
+
+    var token = obj[name];
+    if (token == null) return fallback;
+
+    var s = ((string)token) ?? string.Empty;
+    s = s.Trim();
+    if (s.Length == 0) return fallback;
+
+    if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        s = s.Substring(2);
+
+    int v;
+    if (!int.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out v))
+        return fallback;
+
+    return v;
+}
+```
+
 ## Step4: Execute Write
 
 ```
