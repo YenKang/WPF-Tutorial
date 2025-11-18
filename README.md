@@ -1,174 +1,202 @@
-using System;
-using System.Diagnostics;
-using System.Globalization;
-using Newtonsoft.Json.Linq;
-using Utility.MVVM;
-using Utility.MVVM.Command;
+## Step1: 在 ViewModel 上面，建立 RegisterItem.cs
 
-namespace BistMode.ViewModels
+```
+public class RegisterItem
 {
-    public class GrayLevelVM : ViewModelBase
+    public string RegName { get; set; }
+    public int Value { get; set; }
+}
+```
+
+## Step2:建立registerTable.cs
+
+```
+public class RegisterTable
+{
+    public List<RegisterItem> Items { get; private set; }
+
+    public RegisterTable()
     {
-        private JObject _cfg;
+        Items = new List<RegisterItem>();
+    }
 
-        private int _min = 0x000;
-        private int _max = 0x3FF;
-        private int _default = 0x3FF;
-        private int _value = 0x3FF;
-
-        public int GrayLevel_Value
+    public void Add(string regName, int value)
+    {
+        Items.Add(new RegisterItem
         {
-            get { return _value; }
-            set
-            {
-                if (_value == value) return;
-                _value = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public string GrayLevel_Text
-        {
-            get { return GetValue<string>(); }
-            set
-            {
-                SetValue(value);
-
-                if (string.IsNullOrWhiteSpace(value))
-                    return;
-
-                try
-                {
-                    var s = value.Trim();
-
-                    // 允許 "0x3FF" 或 "3FF"
-                    if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                        s = s.Substring(2);
-
-                    int v;
-                    if (!int.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out v))
-                        return;
-
-                    // clamp
-                    if (v < _min) v = _min;
-                    if (v > _max) v = _max;
-
-                    GrayLevel_Value = v;
-
-                    // 標準化為 3 位 HEX
-                    var normalized = v.ToString("X3");
-                    SetValue(normalized);
-                }
-                catch
-                {
-                    // 打字中不彈 error
-                }
-            }
-        }
-
-        public ICommand ApplyCommand { get; private set; }
-
-        public GrayLevelVM()
-        {
-            ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
-            GrayLevel_Text = "000";
-        }
-
-        /// <summary>
-        /// 從 JSON 的 grayLevelControl 讀取 min / max / default
-        /// </summary>
-        public void LoadFrom(object jsonConfig)
-        {
-            _cfg = jsonConfig as JObject;
-            if (_cfg == null)
-                return;
-
-            var glCtrl = _cfg["grayLevelControl"]?["grayLevel"] as JObject;
-            if (glCtrl == null)
-                return;
-
-            _min = ReadHex(glCtrl, "min", 0x000);
-            _max = ReadHex(glCtrl, "max", 0x3FF);
-            _default = ReadHex(glCtrl, "default", 0x3FF);
-
-            GrayLevel_Value = _default;
-            GrayLevel_Text = _default.ToString("X3");
-
-            Debug.WriteLine($"[LoadFrom] GrayLevel: min=0x{_min:X3}, max=0x{_max:X3}, default=0x{_default:X3}");
-        }
-
-        private static int ReadHex(JObject obj, string name, int fallback)
-        {
-            if (obj == null) return fallback;
-
-            var token = obj[name];
-            if (token == null) return fallback;
-
-            var s = ((string)token)?.Trim() ?? "";
-
-            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                s = s.Substring(2);
-
-            int v;
-            if (!int.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out v))
-                return fallback;
-
-            return v;
-        }
-
-        /// <summary>
-        /// 真正寫入暫存器
-        /// GrayLevel_Value = 10-bit 數值
-        /// low 8 bits → BIST_PT_LEVEL
-        /// high 2 bits → BIST_CK_GY_FK_PT bit1~bit0
-        /// </summary>
-        private void ExecuteWrite()
-        {
-            if (_cfg == null)
-                return;
-
-            byte low8 = (byte)(GrayLevel_Value & 0xFF);          // bit7~0
-            byte high2 = (byte)((GrayLevel_Value >> 8) & 0x03);  // bit9~8
-
-            Debug.WriteLine($"[Gray ExecuteWrite] val=0x{GrayLevel_Value:X3}, low=0x{low8:X2}, high2=0x{high2:X1}");
-
-            var writes = _cfg["writes"] as JArray;
-            if (writes == null || writes.Count == 0)
-            {
-                MessageBox.Show("GrayLevel JSON 格式錯誤");
-                return;
-            }
-
-            for (int i = 0; i < writes.Count; i++)
-            {
-                JObject w = (JObject)writes[i];
-                string mode = (string)w["mode"];
-                string target = (string)w["target"];
-                if (string.IsNullOrEmpty(target)) continue;
-
-                Debug.WriteLine($"→ rule: mode={mode}, target={target}");
-
-                if (mode == "write8")
-                {
-                    Debug.WriteLine($"  write8 {target} = 0x{low8:X2}");
-                    RegMap.Write8(target, low8);
-                }
-                else if (mode == "rmw")
-                {
-                    int mask = Convert.ToInt32((string)w["mask"], 16);  // 0x03
-                    int shift = (int?)w["shift"] ?? 0;                   // 0
-
-                    byte cur = RegMap.Read8(target);
-
-                    byte newBits = (byte)((high2 << shift) & mask);
-
-                    byte next = (byte)((cur & ~mask) | newBits);
-
-                    Debug.WriteLine($"  rmw {target}: cur=0x{cur:X2}, next=0x{next:X2}");
-
-                    RegMap.Write8(target, next);
-                }
-            }
-        }
+            RegName = regName,
+            Value = value
+        });
     }
 }
+```
+
+## Step3:確認資料來源 (OSDSlotList)
+
+```
+public class OsdSlotModel
+{
+    public int OsdIndex { get; set; }       // 1-based
+    public int IconIndex { get; set; }      // 1-based
+
+    public bool IsOsdEnabled { get; set; }
+    public int OsdIconSel { get; set; }
+
+    public int HPos { get; set; }
+    public int VPos { get; set; }
+
+    public int SramStartAddr { get; set; }
+    public int FlashStartAddr { get; set; }
+
+    public bool SramCrcEn { get; set; }
+    public bool TtaleEn { get; set; }
+
+    public ImageModel SelectedImage { get; set; }
+}
+```
+
+## Step4:貼入viewModel
+
+
+```
+public RegisterTable CollectRegisterTable()
+{
+    var table = new RegisterTable();
+    var slots = this.OsdSlotList;
+
+    // ----------------------------------------------------
+    // 1. ICON_DL_SEL[29:0]  → bitmap
+    // ----------------------------------------------------
+    int dlSelBitmap = 0;
+    foreach (var slot in slots)
+    {
+        if (slot.SelectedImage != null)
+            dlSelBitmap |= (1 << (slot.IconIndex - 1));   // 1-based → bit(iconIndex-1)
+    }
+    table.Add("ICON_DL_SEL", dlSelBitmap);
+
+    // ----------------------------------------------------
+    // 2. ICON#_FLH_ADD_STA
+    // ----------------------------------------------------
+    foreach (var slot in slots)
+    {
+        string reg = $"ICON{slot.IconIndex}_FLH_ADD_STA";
+        table.Add(reg, slot.FlashStartAddr);
+    }
+
+    // ----------------------------------------------------
+    // 3. ICON#_SRAM_ADDR
+    // ----------------------------------------------------
+    foreach (var slot in slots)
+    {
+        string reg = $"ICON{slot.IconIndex}_SRAM_ADDR";
+        table.Add(reg, slot.SramStartAddr & 0x7FFF);
+    }
+
+    // ----------------------------------------------------
+    // 4. OSD#_ICON_SEL[5:0]
+    // ----------------------------------------------------
+    foreach (var slot in slots)
+    {
+        string reg = $"OSD{slot.OsdIndex}_ICON_SEL";
+        table.Add(reg, slot.OsdIconSel & 0x3F);
+    }
+
+    // ----------------------------------------------------
+    // 5. OSD#_EN
+    // ----------------------------------------------------
+    foreach (var slot in slots)
+    {
+        string reg = $"OSD{slot.OsdIndex}_EN";
+        table.Add(reg, slot.IsOsdEnabled ? 1 : 0);
+    }
+
+    // ----------------------------------------------------
+    // 6. OSD#_SRAMCRC_EN
+    // ----------------------------------------------------
+    foreach (var slot in slots)
+    {
+        string reg = $"OSD{slot.OsdIndex}_SRAMCRC_EN";
+        table.Add(reg, slot.SramCrcEn ? 1 : 0);
+    }
+
+    // ----------------------------------------------------
+    // 7. TTALE#
+    // ----------------------------------------------------
+    foreach (var slot in slots)
+    {
+        string reg = $"TTALE{slot.OsdIndex}";
+        table.Add(reg, slot.TtaleEn ? 1 : 0);
+    }
+
+    // ----------------------------------------------------
+    // 8. OSD#_V_POS
+    // ----------------------------------------------------
+    foreach (var slot in slots)
+    {
+        string reg = $"OSD{slot.OsdIndex}_V_POS";
+        table.Add(reg, slot.VPos & 0x1FFF);
+    }
+
+    // ----------------------------------------------------
+    // 9. OSD#_H_POS
+    // ----------------------------------------------------
+    foreach (var slot in slots)
+    {
+        string reg = $"OSD{slot.OsdIndex}_H_POS";
+        table.Add(reg, slot.HPos & 0x1FFF);
+    }
+
+    return table;
+}
+```
+
+```
+public void DebugRegisterTable(RegisterTable table)
+{
+    var sb = new StringBuilder();
+    sb.AppendLine("===== Register Table Dump =====");
+
+    foreach (var item in table.Items)
+    {
+        sb.AppendLine($"{item.RegName} = 0x{item.Value:X} ({item.Value})");
+    }
+
+    sb.AppendLine("===== End =====");
+
+    System.Diagnostics.Debug.WriteLine(sb.ToString());
+}
+```
+
+## Step6: 按鈕中呼叫
+
+```
+private void OnWriteRegisterTable()
+{
+    var table = CollectRegisterTable();
+    DebugRegisterTable(table);  // <-- Debug 用
+}
+```
+
+```
+<StackPanel Grid.Row="2"
+            Orientation="Horizontal"
+            HorizontalAlignment="Right"
+            Margin="0,8,0,0">
+
+    <!-- ✅ 新增：寫入 Register Table -->
+    <Button Content="寫入 Register Table"
+            Margin="0,0,8,0"
+            Padding="16,4"
+            Command="{Binding WriteRegisterTableCommand}" />
+
+    <Button Content="Export"
+            Margin="0,0,8,0"
+            Padding="16,4"
+            Command="{Binding ExportCommand}" />
+
+    <Button Content="Cancel"
+            Padding="16,4"
+            IsCancel="True" />
+</StackPanel>
+```
