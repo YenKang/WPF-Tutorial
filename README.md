@@ -1,125 +1,151 @@
 using Newtonsoft.Json.Linq;
 using PageBase.ICStructure.Comm;
 using System;
-using System.Diagnostics;
-using System.Windows;
 using System.Windows.Input;
 using Utility.MVVM;
 using Utility.MVVM.Command;
 
 namespace BistMode.ViewModels
 {
-    public class GrayReverseVM : ViewModelBase
+    public class BWLoopVM : ViewModelBase
     {
-        private JObject _cfg;              // 記住 grayReverseControl JSON block
-        private string _registerName = "BIST_HGRAY_REV"; // 預設，實際由 JSON 覆蓋
+        // JSON 參數
+        private int _min = 0x000;
+        private int _max = 0x3FF;
+        private int _defaultValue = 0x01E;
 
-        // Checkbox 綁定的值（true = 啟用）
-        public bool Enable
-        {
-            get { return GetValue<bool>(); }
-            set { SetValue(value); }
-        }
+        // 單一暫存器名稱（由 JSON 的 "register" 決定）
+        private string _registerName = "BIST_FCNT2";
 
-        public string Axis
+        /// <summary>
+        /// 儲存使用者上次設定的 FCNT2 值
+        /// </summary>
+        public static class BWLoopCache
         {
-            get { return GetValue<string>(); }
-            set
+            public static bool HasMemory { get; private set; }
+
+            public static int FCNT2Value { get; private set; }
+
+            public static void SaveBWLoop(int fcnt2Value)
             {
-                SetValue(value);
-                Title = Axis == "V"
-                    ? "Vertical Gray Reverse Enable"
-                    : "Horizontal Gray Reverse Enable";
+                FCNT2Value = fcnt2Value;
+                HasMemory = true;
+            }
+
+            public static void Clear()
+            {
+                HasMemory = false;
+                FCNT2Value = 0;
             }
         }
 
-        public string Title
+        /// <summary>
+        /// UI 綁定用的 FCNT2 數值（0x000 ~ 0x3FF）
+        /// </summary>
+        public int FCNT2_Value
         {
-            get { return GetValue<string>(); }
+            get { return GetValue<int>(); }
             set { SetValue(value); }
         }
 
         /// <summary>
-        /// 對應 RegControl.SetRegisterByName 用的介面
+        /// 實際寫暫存器用的介面，由外部注入
         /// </summary>
         public IRegisterReadWriteEx RegControl { get; set; }
 
         public ICommand ApplyCommand { get; private set; }
 
-        public GrayReverseVM()
+        public BWLoopVM()
         {
-            ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
-
-            // 若尚未載入 JSON，先給預設值
-            Axis = "H";
-            Enable = false;
+            ApplyCommand = CommandFactory.CreateCommand(Apply);
         }
 
         /// <summary>
-        /// 從 grayReverseControl JSON 讀取 axis / default / register
-        /// （呼叫端傳進來的 jsonCfg 應該就是 grayReverseControl 這個物件）
+        /// 從 bwLoopControl JSON 讀取 fcnt2 的 min/max/default/register
         /// </summary>
-        public void LoadFrom(object jsonCfg)
+        public void LoadFrom(JObject bwLoopControlNode)
         {
-            _cfg = jsonCfg as JObject;
-            if (_cfg == null)
+            if (bwLoopControlNode == null)
                 return;
 
-            // axis: "H" / "V"
-            var axisToken = _cfg["axis"];
-            var axis = axisToken != null
-                ? axisToken.ToString().Trim().ToUpperInvariant()
-                : "H";
-            Axis = (axis == "V") ? "V" : "H";
+            var fcnt2 = bwLoopControlNode["fcnt2"] as JObject;
+            if (fcnt2 == null)
+                return;
 
-            // default: 0 / 1
-            int def = 0;
-            var defTok = _cfg["default"];
-            if (defTok != null)
-            {
-                int tmp;
-                if (int.TryParse(defTok.ToString(), out tmp))
-                    def = tmp;
-            }
-            Enable = (def != 0);
+            _defaultValue = TryParseInt((string)fcnt2["default"], _defaultValue);
+            _min          = TryParseInt((string)fcnt2["min"],      _min);
+            _max          = TryParseInt((string)fcnt2["max"],      _max);
 
-            // register: 直接指定要寫入的暫存器名稱
-            var regTok = _cfg["register"];
+            // 新 JSON：單一 register
+            var regTok = fcnt2["register"];
             var regName = regTok != null ? regTok.ToString().Trim() : string.Empty;
             if (!string.IsNullOrEmpty(regName))
+            {
                 _registerName = regName;
+            }
             else
-                _registerName = "BIST_HGRAY_REV"; // 保底
+            {
+                _registerName = "BIST_FCNT2"; // 保底名稱
+            }
 
-            Debug.WriteLine(
-                $"[GrayReverse LoadFrom] axis={Axis}, default={def}, register={_registerName}");
+            if (BWLoopCache.HasMemory)
+            {
+                FCNT2_Value = BWLoopCache.FCNT2Value;
+            }
+            else
+            {
+                FCNT2_Value = _defaultValue;
+            }
         }
 
-        /// <summary>
-        /// 將 Enable(0/1) 寫入 JSON 指定的 register
-        /// 不再使用 RegMap / RMW / writes[]。
-        /// </summary>
-        private void ExecuteWrite()
+        private void Apply()
         {
-            if (_cfg == null)
-            {
-                MessageBox.Show("GrayReverse JSON 尚未載入。");
-                return;
-            }
-
             if (RegControl == null)
-            {
-                MessageBox.Show("RegControl 尚未注入。");
                 return;
+
+            // 1. clamp 在合法範圍
+            int value = Clamp(FCNT2_Value, _min, _max);
+            if (value != FCNT2_Value)
+                FCNT2_Value = value; // 修正 UI 顯示
+
+            // 2. 直接把 10-bit 整數寫進 JSON 指定的暫存器
+            RegControl.SetRegisterByName(_registerName, (uint)value);
+
+            // 3. 存入快取，切換圖再回來時沿用
+            BWLoopCache.SaveBWLoop(value);
+        }
+
+        private static int Clamp(int v, int min, int max)
+        {
+            if (v < min) return min;
+            if (v > max) return max;
+            return v;
+        }
+
+        private static int TryParseInt(string s, int fallback)
+        {
+            if (string.IsNullOrWhiteSpace(s))
+                return fallback;
+
+            s = s.Trim();
+            uint uv;
+
+            // 支援 "0x..." hex
+            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                if (uint.TryParse(s.Substring(2), System.Globalization.NumberStyles.HexNumber,
+                                  null, out uv))
+                {
+                    return (int)uv;
+                }
+                return fallback;
             }
 
-            uint val = Enable ? 1u : 0u;
+            // 一般十進位
+            if (uint.TryParse(s, out uv))
+                return (int)uv;
 
-            Debug.WriteLine(
-                $"[GrayReverse ExecuteWrite] axis={Axis}, enable={Enable}, register={_registerName}, val={val}");
-
-            // 新版：直接透過 RegControl 寫入
-            RegControl.SetRegisterByName(_registerName, val);
+            return fallback;
         }
     }
 }
