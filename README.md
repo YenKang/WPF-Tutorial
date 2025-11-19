@@ -13,19 +13,19 @@ namespace BistMode.ViewModels
     {
         private JObject _cfg;
 
-        // JSON 參數 (由 fields 覆蓋)
+        // JSON 讀出來的範圍 (預設值先給一組，LoadFrom 會覆蓋)
         private int _hResMin = 720, _hResMax = 6720;
         private int _vResMin = 136, _vResMax = 2560;
         private int _mMin    = 2,   _mMax    = 40;
         private int _nMin    = 2,   _nMax    = 40;
 
-        // registers from JSON (chessH / chessV)
-        private string _regToggleHeight = "BIST_CHESSBOARD_H_TOGGLE_W";
-        private string _regHeightPlus1  = "BIST_CHESSBOARD_H_PLUS1_BLKNUM";
-        private string _regToggleWidth  = "BIST_CHESSBOARD_V_TOGGLE_H";
-        private string _regWidthPlus1   = "BIST_CHESSBOARD_V_PLUS1_BLKNUM";
+        // 從 JSON 讀到的暫存器名稱（H / V 分開）
+        private string _regToggleH = "BIST_CHESSBOARD_H_TOGGLE_W";
+        private string _regPlus1H  = "BIST_CHESSBOARD_H_PLUS1_BLKNUM";
+        private string _regToggleV = "BIST_CHESSBOARD_V_TOGGLE_H";
+        private string _regPlus1V  = "BIST_CHESSBOARD_V_PLUS1_BLKNUM";
 
-        // 給 ComboBox 的項目
+        // 給 M/N ComboBox 使用
         public ObservableCollection<int> MOptions { get; } = new ObservableCollection<int>();
         public ObservableCollection<int> NOptions { get; } = new ObservableCollection<int>();
 
@@ -50,7 +50,7 @@ namespace BistMode.ViewModels
             set { SetValue(Clamp(value, _vResMin, _vResMax)); }
         }
 
-        // M / N 仍然有 clamp（在 Apply 時做一次保護）
+        // M / N：實際 clamp 放在 Apply() 再做一次
         public int M
         {
             get { return GetValue<int>(); }
@@ -66,7 +66,7 @@ namespace BistMode.ViewModels
         public ICommand ApplyCommand { get; }
 
         /// <summary>
-        /// 對應 SetRegisterByName 的介面（外部注入）
+        /// 由外部注入的暫存器讀寫介面
         /// </summary>
         public PageBase.ICStructure.Comm.IRegisterReadWriteEx RegControl { get; set; }
 
@@ -74,23 +74,17 @@ namespace BistMode.ViewModels
         {
             ApplyCommand = CommandFactory.CreateCommand(Apply);
 
-            // 先給預設值（之後會被 JSON 覆蓋）
+            // 初始預設值（之後會被 JSON 覆蓋）
             HRes = 1920;
             VRes = 720;
-            M = 5;
-            N = 7;
+            M    = 5;
+            N    = 7;
 
             BuildOptions();
         }
 
         /// <summary>
-        /// 從 "chessBoardControl" 節點載入設定
-        /// node 結構：
-        /// {
-        ///   "fields": [ { key, default, min, max }, ... ],
-        ///   "chessH": { "registers": [ { "Toggle_Height": "..." }, { "Height_PLUS1": "..." } ] },
-        ///   "chessV": { "registers": [ { "Toggle_Width": "..." }, { "Width_PLUS1": "..." } ] }
-        /// }
+        /// 從 chessBoardControl 節點載入設定
         /// </summary>
         public void LoadFrom(JObject node)
         {
@@ -99,7 +93,7 @@ namespace BistMode.ViewModels
 
             try
             {
-                // ---- fields ----
+                // ---- fields: H_RES / V_RES / M / N ----
                 if (node["fields"] is JArray fields)
                 {
                     foreach (JObject f in fields.Cast<JObject>())
@@ -152,8 +146,9 @@ namespace BistMode.ViewModels
 
                             switch (name)
                             {
-                                case "Toggle_Height": _regToggleHeight = val; break;
-                                case "Height_PLUS1":  _regHeightPlus1  = val; break;
+                                // 最終 JSON：Toggle_Width / H_PLUS1
+                                case "Toggle_Width": _regToggleH = val; break;
+                                case "H_PLUS1":      _regPlus1H  = val; break;
                             }
                         }
                     }
@@ -173,8 +168,9 @@ namespace BistMode.ViewModels
 
                             switch (name)
                             {
-                                case "Toggle_Width": _regToggleWidth = val; break;
-                                case "Width_PLUS1":  _regWidthPlus1  = val; break;
+                                // 最終 JSON：Toggle_Height / V_PLUS1
+                                case "Toggle_Height": _regToggleV = val; break;
+                                case "V_PLUS1":       _regPlus1V  = val; break;
                             }
                         }
                     }
@@ -198,7 +194,7 @@ namespace BistMode.ViewModels
             int nStart = Math.Min(_nMin, _nMax);
             int nEnd   = Math.Max(_nMin, _nMax);
 
-            // 若超出範圍，拉回 JSON 指定範圍
+            // 若目前值超出範圍，就拉回合法範圍
             if (M < mStart || M > mEnd) M = mStart;
             if (N < nStart || N > nEnd) N = nStart;
 
@@ -218,10 +214,10 @@ namespace BistMode.ViewModels
         }
 
         /// <summary>
-        /// 按下 Set 之後：
+        /// 按下 Set：
         /// 1. clamp H/V/M/N
-        /// 2. 計算 toggle / plus1
-        /// 3. 透過 RegControl.SetRegisterByName 寫入四個暫存器
+        /// 2. 用「選項 A」公式計算 th/tv/hPlus/vPlus
+        /// 3. 透過 SetRegisterByName 寫入暫存器
         /// </summary>
         private void Apply()
         {
@@ -237,7 +233,7 @@ namespace BistMode.ViewModels
                 return;
             }
 
-            // clamp 一次
+            // 邊界保護
             HRes = Clamp(HRes, _hResMin, _hResMax);
             VRes = Clamp(VRes, _vResMin, _vResMax);
             M    = Clamp(M, _mMin, _mMax);
@@ -245,38 +241,35 @@ namespace BistMode.ViewModels
 
             int hRes = HRes;
             int vRes = VRes;
-            int m    = M;
-            int n    = N;
 
-            if (m <= 0 || n <= 0)
-            {
-                MessageBox.Show("M / N 不可為 0。");
-                return;
-            }
+            int m = M <= 0 ? 1 : M;
+            int n = N <= 0 ? 1 : N;
 
-            // 舊公式：toggle = (Res / 分割數) - 1, plus1 = toggle + 1
-            int toggleH = (hRes / m) - 1;
-            int plus1H  = toggleH + 1;
+            // 基本寬度 / 高度（整除部分）
+            int th = hRes / m;   // 每一格的水平寬度
+            int tv = vRes / n;   // 每一格的垂直高度
 
-            int toggleV = (vRes / n) - 1;
-            int plus1V  = toggleV + 1;
+            // "+1 分配數" = 餘數有幾個格子是 (basic + 1)
+            int hPlus = hRes - th * m;  // 0..(m-1)
+            int vPlus = vRes - tv * n;  // 0..(n-1)
 
-            if (toggleH < 0) toggleH = 0;
-            if (toggleV < 0) toggleV = 0;
-            if (plus1H  < 0) plus1H  = 0;
-            if (plus1V  < 0) plus1V  = 0;
+            if (th    < 0) th    = 0;
+            if (tv    < 0) tv    = 0;
+            if (hPlus < 0) hPlus = 0;
+            if (vPlus < 0) vPlus = 0;
 
-            // Debug trace
             System.Diagnostics.Debug.WriteLine(
                 $"[Chessboard] HRes={hRes}, VRes={vRes}, M={m}, N={n}, " +
-                $"toggleH={toggleH}, plus1H={plus1H}, toggleV={toggleV}, plus1V={plus1V}");
+                $"th={th}, tv={tv}, hPlus={hPlus}, vPlus={vPlus}, " +
+                $"regH_Toggle={_regToggleH}, regH_Plus1={_regPlus1H}, " +
+                $"regV_Toggle={_regToggleV}, regV_Plus1={_regPlus1V}");
 
-            // 直接用 SetRegisterByName 寫入暫存器
-            RegControl.SetRegisterByName(_regToggleHeight, (uint)toggleH);
-            RegControl.SetRegisterByName(_regHeightPlus1,  (uint)plus1H);
+            // 直接寫入暫存器（新 JSON 已經是一個功能對應一個暫存器）
+            RegControl.SetRegisterByName(_regToggleH, (uint)th);
+            RegControl.SetRegisterByName(_regPlus1H,  (uint)hPlus);
 
-            RegControl.SetRegisterByName(_regToggleWidth,  (uint)toggleV);
-            RegControl.SetRegisterByName(_regWidthPlus1,   (uint)plus1V);
+            RegControl.SetRegisterByName(_regToggleV, (uint)tv);
+            RegControl.SetRegisterByName(_regPlus1V,  (uint)vPlus);
         }
     }
 }
