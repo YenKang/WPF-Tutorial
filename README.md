@@ -13,8 +13,8 @@ namespace BistMode.ViewModels
 {
     /// <summary>
     /// Flicker Plane RGB Level ViewModel
-    /// 對應 UI：P1~P4 × R/G/B，各自 0~15 (0~F) 的 ComboBox。
-    /// 新版 JSON: flickerRGBControl.Registers.*
+    /// P1~P4 × R/G/B，各自 0~15 (0~F) ComboBox。
+    /// JSON: flickerRGBControl.Registers.*
     /// </summary>
     public sealed class FlickerRGBVM : ViewModelBase
     {
@@ -29,12 +29,9 @@ namespace BistMode.ViewModels
 
         public ICommand ApplyCommand { get; }
 
-        private JObject _cfg; // 整個 flickerRGBControl 區塊
+        private JObject _cfg; 
         private readonly List<ChannelEntry> _entries = new List<ChannelEntry>();
 
-        /// <summary>
-        /// 由外部注入的暫存器讀寫介面
-        /// </summary>
         public IRegisterReadWriteEx RegControl { get; set; }
 
         public FlickerRGBVM()
@@ -42,16 +39,6 @@ namespace BistMode.ViewModels
             ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
         }
 
-        /// <summary>
-        /// 由 PatternItem.FlickerRGBControl 傳入 JSON block
-        /// 新版結構：
-        /// {
-        ///   "flickerRGBControl" : {
-        ///       "Registers" : { ... }
-        ///   }
-        /// }
-        /// 這裡的 jsonCfg 就是 flickerRGBControl 那一層。
-        /// </summary>
         public void LoadFrom(object jsonCfg)
         {
             _entries.Clear();
@@ -98,13 +85,10 @@ namespace BistMode.ViewModels
             foreach (var e in _entries)
             {
                 Debug.WriteLine(
-                    $"[FLK LoadFrom] {e.Name}: reg={e.Register}, range={e.Min}~{e.Max}, def={e.Default}");
+                    $"[FLK LoadFrom] {e.Name}: reg={e.Register}, min={e.Min}, max={e.Max}, def={e.Default}");
             }
         }
 
-        /// <summary>
-        /// 將 Registers.* 轉成 ChannelEntry，並初始化 PlaneVM 的 R/G/B 預設值
-        /// </summary>
         private void SetupChannel(
             JObject regs,
             string key,
@@ -131,9 +115,8 @@ namespace BistMode.ViewModels
                 Default  = ReadInt(node, "default", 0)
             };
 
-            // 初始化 UI 顯示值（Clamp default）
-            var def = Clamp(entry.Default, entry.Min, entry.Max);
-            setter(plane, def);
+            // UI 初始值直接用 default（ComboBox 已限制 0~15）
+            setter(plane, entry.Default);
 
             _entries.Add(entry);
         }
@@ -163,26 +146,13 @@ namespace BistMode.ViewModels
 
             foreach (var entry in _entries)
             {
-                int raw = entry.Getter(entry.Plane);
-                int clamped = Clamp(raw, entry.Min, entry.Max);
-
-                if (clamped != raw)
-                    entry.Setter(entry.Plane, clamped); // 修正 UI
+                int value = entry.Getter(entry.Plane); // 0~15，由 ComboBox 保證
 
                 Debug.WriteLine(
-                    $"[FLK] Write {entry.Register} <= 0x{clamped:X1} ({entry.Name})");
+                    $"[FLK] Write {entry.Register} <= 0x{value:X1} ({entry.Name})");
 
-                RegControl.SetRegisterByName(entry.Register, (uint)clamped);
+                RegControl.SetRegisterByName(entry.Register, (uint)value);
             }
-        }
-
-        #region helpers
-
-        private static int Clamp(int v, int min, int max)
-        {
-            if (v < min) return min;
-            if (v > max) return max;
-            return v;
         }
 
         private static int ReadInt(JObject obj, string key, int fallback)
@@ -208,26 +178,18 @@ namespace BistMode.ViewModels
             return string.IsNullOrEmpty(s) ? fallback : s;
         }
 
-        /// <summary>
-        /// 一個 channel (P1.R / P2.G / ...) 的設定與寫入資訊
-        /// </summary>
         private sealed class ChannelEntry
         {
-            public string Name;               // ex: "Page1Red"
+            public string Name;
             public PlaneVM Plane;
             public Func<PlaneVM, int> Getter;
             public Action<PlaneVM, int> Setter;
-            public string Register;           // ex: "BIST_FLK_P1_R"
+            public string Register;
             public int Min;
             public int Max;
             public int Default;
         }
 
-        #endregion
-
-        /// <summary>
-        /// UI 上每一列 P1~P4
-        /// </summary>
         public sealed class PlaneVM : ViewModelBase
         {
             public int Index { get; private set; }
@@ -237,20 +199,20 @@ namespace BistMode.ViewModels
 
             public int R
             {
-                get { return GetValue<int>(); }
-                set { SetValue(value); }
+                get => GetValue<int>();
+                set => SetValue(value);
             }
 
             public int G
             {
-                get { return GetValue<int>(); }
-                set { SetValue(value); }
+                get => GetValue<int>();
+                set => SetValue(value);
             }
 
             public int B
             {
-                get { return GetValue<int>(); }
-                set { SetValue(value); }
+                get => GetValue<int>();
+                set => SetValue(value);
             }
 
             public PlaneVM(int index)
