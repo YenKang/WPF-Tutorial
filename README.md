@@ -1,9 +1,7 @@
 using Newtonsoft.Json.Linq;
-using PageBase.ICStructure.Comm;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using Utility.MVVM;
@@ -11,225 +9,274 @@ using Utility.MVVM.Command;
 
 namespace BistMode.ViewModels
 {
-    /// <summary>
-    /// Flicker Plane RGB Level ViewModel
-    /// P1~P4 × R/G/B，各自 0~15 (0~F) ComboBox。
-    /// JSON: flickerRGBControl.Registers.*
-    /// </summary>
-    public sealed class FlickerRGBVM : ViewModelBase
+    public class ChessBoardVM : ViewModelBase
     {
-        public ObservableCollection<PlaneVM> Planes { get; } =
-            new ObservableCollection<PlaneVM>
-            {
-                new PlaneVM(1),
-                new PlaneVM(2),
-                new PlaneVM(3),
-                new PlaneVM(4)
-            };
+        private JObject _cfg;
+
+        // JSON 參數 (由 fields 覆蓋)
+        private int _hResMin = 720, _hResMax = 6720;
+        private int _vResMin = 136, _vResMax = 2560;
+        private int _mMin    = 2,   _mMax    = 40;
+        private int _nMin    = 2,   _nMax    = 40;
+
+        // registers from JSON (chessH / chessV)
+        private string _regToggleHeight = "BIST_CHESSBOARD_H_TOGGLE_W";
+        private string _regHeightPlus1  = "BIST_CHESSBOARD_H_PLUS1_BLKNUM";
+        private string _regToggleWidth  = "BIST_CHESSBOARD_V_TOGGLE_H";
+        private string _regWidthPlus1   = "BIST_CHESSBOARD_V_PLUS1_BLKNUM";
+
+        // 給 ComboBox 的項目
+        public ObservableCollection<int> MOptions { get; } = new ObservableCollection<int>();
+        public ObservableCollection<int> NOptions { get; } = new ObservableCollection<int>();
+
+        private static int Clamp(int v, int min, int max)
+        {
+            if (v < min) return min;
+            if (v > max) return max;
+            return v;
+        }
+
+        // ========= 屬性 =========
+
+        public int HRes
+        {
+            get { return GetValue<int>(); }
+            set { SetValue(Clamp(value, _hResMin, _hResMax)); }
+        }
+
+        public int VRes
+        {
+            get { return GetValue<int>(); }
+            set { SetValue(Clamp(value, _vResMin, _vResMax)); }
+        }
+
+        // M / N 仍然有 clamp（在 Apply 時做一次保護）
+        public int M
+        {
+            get { return GetValue<int>(); }
+            set { SetValue(value); }
+        }
+
+        public int N
+        {
+            get { return GetValue<int>(); }
+            set { SetValue(value); }
+        }
 
         public ICommand ApplyCommand { get; }
 
-        private JObject _cfg; 
-        private readonly List<ChannelEntry> _entries = new List<ChannelEntry>();
+        /// <summary>
+        /// 對應 SetRegisterByName 的介面（外部注入）
+        /// </summary>
+        public PageBase.ICStructure.Comm.IRegisterReadWriteEx RegControl { get; set; }
 
-        public IRegisterReadWriteEx RegControl { get; set; }
-
-        public FlickerRGBVM()
+        public ChessBoardVM()
         {
-            ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
+            ApplyCommand = CommandFactory.CreateCommand(Apply);
+
+            // 先給預設值（之後會被 JSON 覆蓋）
+            HRes = 1920;
+            VRes = 720;
+            M = 5;
+            N = 7;
+
+            BuildOptions();
         }
 
-        public void LoadFrom(object jsonCfg)
+        /// <summary>
+        /// 從 "chessBoardControl" 節點載入設定
+        /// node 結構：
+        /// {
+        ///   "fields": [ { key, default, min, max }, ... ],
+        ///   "chessH": { "registers": [ { "Toggle_Height": "..." }, { "Height_PLUS1": "..." } ] },
+        ///   "chessV": { "registers": [ { "Toggle_Width": "..." }, { "Width_PLUS1": "..." } ] }
+        /// }
+        /// </summary>
+        public void LoadFrom(JObject node)
         {
-            _entries.Clear();
+            _cfg = node;
+            if (_cfg == null) return;
 
-            if (jsonCfg is JObject jo)
-                _cfg = jo;
-            else if (jsonCfg != null)
-                _cfg = JObject.FromObject(jsonCfg);
-            else
+            try
             {
-                _cfg = null;
-                return;
+                // ---- fields ----
+                if (node["fields"] is JArray fields)
+                {
+                    foreach (JObject f in fields.Cast<JObject>())
+                    {
+                        string key = (string)f["key"];
+                        int def = (int?)f["default"] ?? 0;
+                        int min = (int?)f["min"] ?? 0;
+                        int max = (int?)f["max"] ?? 0;
+
+                        switch (key)
+                        {
+                            case "H_RES":
+                                if (min > 0) _hResMin = min;
+                                if (max > 0) _hResMax = max;
+                                HRes = def;
+                                break;
+
+                            case "V_RES":
+                                if (min > 0) _vResMin = min;
+                                if (max > 0) _vResMax = max;
+                                VRes = def;
+                                break;
+
+                            case "M":
+                                if (min > 0) _mMin = min;
+                                if (max > 0) _mMax = max;
+                                M = def;
+                                break;
+
+                            case "N":
+                                if (min > 0) _nMin = min;
+                                if (max > 0) _nMax = max;
+                                N = def;
+                                break;
+                        }
+                    }
+                }
+
+                // ---- chessH.registers ----
+                var chessH = node["chessH"] as JObject;
+                if (chessH != null && chessH["registers"] is JArray hRegs)
+                {
+                    foreach (JObject r in hRegs.Cast<JObject>())
+                    {
+                        foreach (var p in r.Properties())
+                        {
+                            var name = p.Name;
+                            var val = p.Value != null ? p.Value.ToString().Trim() : string.Empty;
+                            if (string.IsNullOrEmpty(val)) continue;
+
+                            switch (name)
+                            {
+                                case "Toggle_Height": _regToggleHeight = val; break;
+                                case "Height_PLUS1":  _regHeightPlus1  = val; break;
+                            }
+                        }
+                    }
+                }
+
+                // ---- chessV.registers ----
+                var chessV = node["chessV"] as JObject;
+                if (chessV != null && chessV["registers"] is JArray vRegs)
+                {
+                    foreach (JObject r in vRegs.Cast<JObject>())
+                    {
+                        foreach (var p in r.Properties())
+                        {
+                            var name = p.Name;
+                            var val = p.Value != null ? p.Value.ToString().Trim() : string.Empty;
+                            if (string.IsNullOrEmpty(val)) continue;
+
+                            switch (name)
+                            {
+                                case "Toggle_Width": _regToggleWidth = val; break;
+                                case "Width_PLUS1":  _regWidthPlus1  = val; break;
+                            }
+                        }
+                    }
+                }
+
+                BuildOptions();
             }
-
-            var regs = _cfg["Registers"] as JObject;
-            if (regs == null)
+            catch (Exception ex)
             {
-                Debug.WriteLine("[FLK LoadFrom] Registers node is null.");
-                return;
-            }
-
-            Debug.WriteLine("[FLK LoadFrom] ---");
-
-            // P1
-            SetupChannel(regs, "Page1Red",   Planes[0], p => p.R, (p, v) => p.R = v);
-            SetupChannel(regs, "Page1Green", Planes[0], p => p.G, (p, v) => p.G = v);
-            SetupChannel(regs, "Page1Blue",  Planes[0], p => p.B, (p, v) => p.B = v);
-
-            // P2
-            SetupChannel(regs, "Page2Red",   Planes[1], p => p.R, (p, v) => p.R = v);
-            SetupChannel(regs, "Page2Green", Planes[1], p => p.G, (p, v) => p.G = v);
-            SetupChannel(regs, "Page2Blue",  Planes[1], p => p.B, (p, v) => p.B = v);
-
-            // P3
-            SetupChannel(regs, "Page3Red",   Planes[2], p => p.R, (p, v) => p.R = v);
-            SetupChannel(regs, "Page3Green", Planes[2], p => p.G, (p, v) => p.G = v);
-            SetupChannel(regs, "Page3Blue",  Planes[2], p => p.B, (p, v) => p.B = v);
-
-            // P4
-            SetupChannel(regs, "Page4Red",   Planes[3], p => p.R, (p, v) => p.R = v);
-            SetupChannel(regs, "Page4Green", Planes[3], p => p.G, (p, v) => p.G = v);
-            SetupChannel(regs, "Page4Blue",  Planes[3], p => p.B, (p, v) => p.B = v);
-
-            foreach (var e in _entries)
-            {
-                Debug.WriteLine(
-                    $"[FLK LoadFrom] {e.Name}: reg={e.Register}, min={e.Min}, max={e.Max}, def={e.Default}");
+                MessageBox.Show("Load json 發生錯誤: " + ex);
             }
         }
 
-        private void SetupChannel(
-            JObject regs,
-            string key,
-            PlaneVM plane,
-            Func<PlaneVM, int> getter,
-            Action<PlaneVM, int> setter)
+        /// <summary>
+        /// 產生 M / N ComboBox 選項
+        /// </summary>
+        private void BuildOptions()
         {
-            var node = regs[key] as JObject;
-            if (node == null)
-            {
-                Debug.WriteLine($"[FLK SetupChannel] node '{key}' not found.");
-                return;
-            }
+            int mStart = Math.Min(_mMin, _mMax);
+            int mEnd   = Math.Max(_mMin, _mMax);
+            int nStart = Math.Min(_nMin, _nMax);
+            int nEnd   = Math.Max(_nMin, _nMax);
 
-            var entry = new ChannelEntry
-            {
-                Name     = key,
-                Plane    = plane,
-                Getter   = getter,
-                Setter   = setter,
-                Register = ReadString(node, "Register", key),
-                Min      = ReadInt(node, "min", 0),
-                Max      = ReadInt(node, "max", 15),
-                Default  = ReadInt(node, "default", 0)
-            };
+            // 若超出範圍，拉回 JSON 指定範圍
+            if (M < mStart || M > mEnd) M = mStart;
+            if (N < nStart || N > nEnd) N = nStart;
 
-            // UI 初始值直接用 default（ComboBox 已限制 0~15）
-            setter(plane, entry.Default);
+            MOptions.Clear();
+            for (int v = mStart; v <= mEnd; v++)
+                MOptions.Add(v);
 
-            _entries.Add(entry);
+            NOptions.Clear();
+            for (int v = nStart; v <= nEnd; v++)
+                NOptions.Add(v);
+
+            // 防呆：避免空清單
+            if (MOptions.Count == 0)
+                for (int v = 2; v <= 40; v++) MOptions.Add(v);
+            if (NOptions.Count == 0)
+                for (int v = 2; v <= 40; v++) NOptions.Add(v);
         }
 
-        private void ExecuteWrite()
+        /// <summary>
+        /// 按下 Set 之後：
+        /// 1. clamp H/V/M/N
+        /// 2. 計算 toggle / plus1
+        /// 3. 透過 RegControl.SetRegisterByName 寫入四個暫存器
+        /// </summary>
+        private void Apply()
         {
             if (_cfg == null)
             {
-                MessageBox.Show("FlickerRGB JSON 尚未載入。");
+                MessageBox.Show("Chessboard JSON 尚未載入。");
                 return;
             }
 
             if (RegControl == null)
             {
                 MessageBox.Show("RegControl 尚未注入。");
-                Debug.WriteLine("[FLK ExecuteWrite] RegControl is NULL.");
                 return;
             }
 
-            if (_entries.Count == 0)
+            // clamp 一次
+            HRes = Clamp(HRes, _hResMin, _hResMax);
+            VRes = Clamp(VRes, _vResMin, _vResMax);
+            M    = Clamp(M, _mMin, _mMax);
+            N    = Clamp(N, _nMin, _nMax);
+
+            int hRes = HRes;
+            int vRes = VRes;
+            int m    = M;
+            int n    = N;
+
+            if (m <= 0 || n <= 0)
             {
-                Debug.WriteLine("[FLK ExecuteWrite] No channel entries.");
+                MessageBox.Show("M / N 不可為 0。");
                 return;
             }
 
-            Debug.WriteLine("[FLK ExecuteWrite] ---");
+            // 舊公式：toggle = (Res / 分割數) - 1, plus1 = toggle + 1
+            int toggleH = (hRes / m) - 1;
+            int plus1H  = toggleH + 1;
 
-            foreach (var entry in _entries)
-            {
-                int value = entry.Getter(entry.Plane); // 0~15，由 ComboBox 保證
+            int toggleV = (vRes / n) - 1;
+            int plus1V  = toggleV + 1;
 
-                Debug.WriteLine(
-                    $"[FLK] Write {entry.Register} <= 0x{value:X1} ({entry.Name})");
+            if (toggleH < 0) toggleH = 0;
+            if (toggleV < 0) toggleV = 0;
+            if (plus1H  < 0) plus1H  = 0;
+            if (plus1V  < 0) plus1V  = 0;
 
-                RegControl.SetRegisterByName(entry.Register, (uint)value);
-            }
-        }
+            // Debug trace
+            System.Diagnostics.Debug.WriteLine(
+                $"[Chessboard] HRes={hRes}, VRes={vRes}, M={m}, N={n}, " +
+                $"toggleH={toggleH}, plus1H={plus1H}, toggleV={toggleV}, plus1V={plus1V}");
 
-        private static int ReadInt(JObject obj, string key, int fallback)
-        {
-            if (obj == null) return fallback;
+            // 直接用 SetRegisterByName 寫入暫存器
+            RegControl.SetRegisterByName(_regToggleHeight, (uint)toggleH);
+            RegControl.SetRegisterByName(_regHeightPlus1,  (uint)plus1H);
 
-            var tok = obj[key];
-            if (tok == null) return fallback;
-
-            int v;
-            if (int.TryParse(tok.ToString(), out v))
-                return v;
-
-            return fallback;
-        }
-
-        private static string ReadString(JObject obj, string key, string fallback)
-        {
-            if (obj == null) return fallback;
-            var tok = obj[key];
-            if (tok == null) return fallback;
-            var s = tok.ToString().Trim();
-            return string.IsNullOrEmpty(s) ? fallback : s;
-        }
-
-        private sealed class ChannelEntry
-        {
-            public string Name;
-            public PlaneVM Plane;
-            public Func<PlaneVM, int> Getter;
-            public Action<PlaneVM, int> Setter;
-            public string Register;
-            public int Min;
-            public int Max;
-            public int Default;
-        }
-
-        public sealed class PlaneVM : ViewModelBase
-        {
-            public int Index { get; private set; }
-
-            public ObservableCollection<int> LevelOptions { get; } =
-                new ObservableCollection<int>(Generate(0, 15));
-
-            public int R
-            {
-                get => GetValue<int>();
-                set => SetValue(value);
-            }
-
-            public int G
-            {
-                get => GetValue<int>();
-                set => SetValue(value);
-            }
-
-            public int B
-            {
-                get => GetValue<int>();
-                set => SetValue(value);
-            }
-
-            public PlaneVM(int index)
-            {
-                Index = index;
-                R = 0;
-                G = 0;
-                B = 0;
-            }
-
-            private static int[] Generate(int min, int max)
-            {
-                var list = new List<int>();
-                for (int i = min; i <= max; i++)
-                    list.Add(i);
-                return list.ToArray();
-            }
+            RegControl.SetRegisterByName(_regToggleWidth,  (uint)toggleV);
+            RegControl.SetRegisterByName(_regWidthPlus1,   (uint)plus1V);
         }
     }
 }
