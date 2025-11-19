@@ -1,6 +1,7 @@
 using Newtonsoft.Json.Linq;
 using PageBase.ICStructure.Comm;
 using System;
+using System.Diagnostics;
 using System.Windows.Input;
 using Utility.MVVM;
 using Utility.MVVM.Command;
@@ -14,7 +15,7 @@ namespace BistMode.ViewModels
         private int _max = 0x3FF;
         private int _defaultValue = 0x01E;
 
-        // 單一暫存器名稱（由 JSON 的 "register" 決定）
+        // 單一暫存器名稱
         private string _registerName = "BIST_FCNT2";
 
         /// <summary>
@@ -39,18 +40,12 @@ namespace BistMode.ViewModels
             }
         }
 
-        /// <summary>
-        /// UI 綁定用的 FCNT2 數值（0x000 ~ 0x3FF）
-        /// </summary>
         public int FCNT2_Value
         {
             get { return GetValue<int>(); }
             set { SetValue(value); }
         }
 
-        /// <summary>
-        /// 實際寫暫存器用的介面，由外部注入
-        /// </summary>
         public IRegisterReadWriteEx RegControl { get; set; }
 
         public ICommand ApplyCommand { get; private set; }
@@ -61,58 +56,70 @@ namespace BistMode.ViewModels
         }
 
         /// <summary>
-        /// 從 bwLoopControl JSON 讀取 fcnt2 的 min/max/default/register
+        /// 從 bwLoopControl JSON 讀取 fcnt2 參數
         /// </summary>
         public void LoadFrom(JObject bwLoopControlNode)
         {
             if (bwLoopControlNode == null)
                 return;
 
+            Debug.WriteLine("[BWLoop LoadFrom] ---");
+
             var fcnt2 = bwLoopControlNode["fcnt2"] as JObject;
             if (fcnt2 == null)
+            {
+                Debug.WriteLine("[BWLoop LoadFrom] fcnt2 node is null!");
                 return;
+            }
 
             _defaultValue = TryParseInt((string)fcnt2["default"], _defaultValue);
             _min          = TryParseInt((string)fcnt2["min"],      _min);
             _max          = TryParseInt((string)fcnt2["max"],      _max);
 
-            // 新 JSON：單一 register
+            // register 名稱
             var regTok = fcnt2["register"];
             var regName = regTok != null ? regTok.ToString().Trim() : string.Empty;
             if (!string.IsNullOrEmpty(regName))
-            {
                 _registerName = regName;
-            }
             else
-            {
-                _registerName = "BIST_FCNT2"; // 保底名稱
-            }
+                _registerName = "BIST_FCNT2";
+
+            Debug.WriteLine($"[BWLoop LoadFrom] range=0x{_min:X3}~0x{_max:X3}, default=0x{_defaultValue:X3}, register={_registerName}");
 
             if (BWLoopCache.HasMemory)
             {
                 FCNT2_Value = BWLoopCache.FCNT2Value;
+                Debug.WriteLine($"[BWLoop LoadFrom] use Cache: 0x{BWLoopCache.FCNT2Value:X3}");
             }
             else
             {
                 FCNT2_Value = _defaultValue;
+                Debug.WriteLine($"[BWLoop LoadFrom] init Default: 0x{_defaultValue:X3}");
             }
         }
 
         private void Apply()
         {
             if (RegControl == null)
+            {
+                Debug.WriteLine("[BWLoop Apply] RegControl is NULL!");
                 return;
+            }
 
-            // 1. clamp 在合法範圍
-            int value = Clamp(FCNT2_Value, _min, _max);
-            if (value != FCNT2_Value)
-                FCNT2_Value = value; // 修正 UI 顯示
+            int clamped = Clamp(FCNT2_Value, _min, _max);
 
-            // 2. 直接把 10-bit 整數寫進 JSON 指定的暫存器
-            RegControl.SetRegisterByName(_registerName, (uint)value);
+            Debug.WriteLine($"[BWLoop Apply] FCNT2 input=0x{FCNT2_Value:X3}, clamped=0x{clamped:X3}");
 
-            // 3. 存入快取，切換圖再回來時沿用
-            BWLoopCache.SaveBWLoop(value);
+            if (clamped != FCNT2_Value)
+                FCNT2_Value = clamped;
+
+            Debug.WriteLine($"[BWLoop Apply] Write register={_registerName}, val=0x{clamped:X3}");
+
+            RegControl.SetRegisterByName(_registerName, (uint)clamped);
+
+            BWLoopCache.SaveBWLoop(clamped);
+
+            Debug.WriteLine($"[BWLoop Apply] Saved Cache val=0x{clamped:X3}");
         }
 
         private static int Clamp(int v, int min, int max)
@@ -130,18 +137,15 @@ namespace BistMode.ViewModels
             s = s.Trim();
             uint uv;
 
-            // 支援 "0x..." hex
             if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
             {
                 if (uint.TryParse(s.Substring(2), System.Globalization.NumberStyles.HexNumber,
                                   null, out uv))
-                {
                     return (int)uv;
-                }
+
                 return fallback;
             }
 
-            // 一般十進位
             if (uint.TryParse(s, out uv))
                 return (int)uv;
 
