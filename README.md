@@ -2,7 +2,6 @@ using Newtonsoft.Json.Linq;
 using PageBase.ICStructure.Comm;
 using System;
 using System.Diagnostics;
-using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using Utility.MVVM;
@@ -10,37 +9,44 @@ using Utility.MVVM.Command;
 
 namespace BistMode.ViewModels
 {
-    public class GrayLevelVM : ViewModelBase
+    public class GrayColorVM : ViewModelBase
     {
-        public static class GrayLevelCache
+        private JObject _cfg;
+
+        // R/G/B 範圍與預設
+        private int _rMin = 0;
+        private int _rMax = 1;
+        private int _rDefault = 1;
+
+        private int _gMin = 0;
+        private int _gMax = 1;
+        private int _gDefault = 0;
+
+        private int _bMin = 0;
+        private int _bMax = 1;
+        private int _bDefault = 0;
+
+        // 各自對應的暫存器名稱（由 JSON 的 register 欄位決定）
+        private string _rRegister = "BIST_GRAY_R_EN";
+        private string _gRegister = "BIST_GRAY_G_EN";
+        private string _bRegister = "BIST_GRAY_B_EN";
+
+        public ObservableCollection<int> BoolOptions { get; } =
+            new ObservableCollection<int>(new[] { 0, 1 });
+
+        public int R
         {
-            private static bool _hasMemory;
-            private static int _grayLevel;
-
-            public static bool HasMemory
-            {
-                get { return _hasMemory; }
-            }
-
-            public static int GrayLevel
-            {
-                get { return _grayLevel; }
-            }
-
-            public static void SaveGrayLevel(int value)
-            {
-                _grayLevel = value;
-                _hasMemory = true;
-            }
+            get { return GetValue<int>(); }
+            set { SetValue(value); }
         }
 
-        private JObject _cfg;
-        private int _min = 0x000;
-        private int _max = 0x3FF;
-        private int _default = 0x3FF;
-        private string _registerName = "BIST_PT_LEVEL";
+        public int G
+        {
+            get { return GetValue<int>(); }
+            set { SetValue(value); }
+        }
 
-        public int GrayLevel_Value
+        public int B
         {
             get { return GetValue<int>(); }
             set { SetValue(value); }
@@ -50,79 +56,93 @@ namespace BistMode.ViewModels
 
         public ICommand ApplyCommand { get; private set; }
 
-        public GrayLevelVM()
+        public GrayColorVM()
         {
             ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
         }
 
         /// <summary>
-        /// 由 JSON 的 grayLevelControl 讀取 min / max / default / register
+        /// 從 grayColorControl JSON 讀取 fields.R/G/B 的 min/max/default/register
         /// </summary>
-        public void LoadFrom(object jsonConfig)
+        public void LoadFrom(object jsonCfg)
         {
-            _cfg = jsonConfig as JObject;
-            var root = _cfg;
-            if (root == null)
+            _cfg = jsonCfg as JObject;
+            var fields = _cfg?["fields"] as JObject;
+            if (fields == null)
                 return;
 
-            // grayLevelControl.grayLevel 區塊
-            var grayCtrl = root["grayLevel"] as JObject;
-            if (grayCtrl == null)
-                return;
-
-            _min = ReadHex(grayCtrl, "min", 0x000);
-            _max = ReadHex(grayCtrl, "max", 0x3FF);
-            _default = ReadHex(grayCtrl, "default", 0x3FF);
-
-            // 新增：從 JSON 讀取 register 名稱，預設為 BIST_PT_LEVEL
-            var regToken = grayCtrl["register"];
-            var regName = regToken != null ? (string)regToken : null;
-            if (!string.IsNullOrEmpty(regName))
+            // ---------- R ----------
+            var rField = fields["R"] as JObject;
+            if (rField != null)
             {
-                _registerName = regName;
-            }
-            else
-            {
-                _registerName = "BIST_PT_LEVEL";
+                _rMin = ReadInt(rField, "min", 0);
+                _rMax = ReadInt(rField, "max", 1);
+                _rDefault = ReadInt(rField, "default", 1);
+
+                var regTok = rField["register"];
+                var regName = regTok != null ? (string)regTok : null;
+                if (!string.IsNullOrEmpty(regName))
+                    _rRegister = regName;
             }
 
-            if (GrayLevelCache.HasMemory)
+            // ---------- G ----------
+            var gField = fields["G"] as JObject;
+            if (gField != null)
             {
-                GrayLevel_Value = GrayLevelCache.GrayLevel;
+                _gMin = ReadInt(gField, "min", 0);
+                _gMax = ReadInt(gField, "max", 1);
+                _gDefault = ReadInt(gField, "default", 0);
+
+                var regTok = gField["register"];
+                var regName = regTok != null ? (string)regTok : null;
+                if (!string.IsNullOrEmpty(regName))
+                    _gRegister = regName;
             }
-            else
+
+            // ---------- B ----------
+            var bField = fields["B"] as JObject;
+            if (bField != null)
             {
-                GrayLevel_Value = _default;
+                _bMin = ReadInt(bField, "min", 0);
+                _bMax = ReadInt(bField, "max", 1);
+                _bDefault = ReadInt(bField, "default", 0);
+
+                var regTok = bField["register"];
+                var regName = regTok != null ? (string)regTok : null;
+                if (!string.IsNullOrEmpty(regName))
+                    _bRegister = regName;
             }
+
+            // 初始化目前值（依 JSON default）
+            R = Clamp(_rDefault, _rMin, _rMax);
+            G = Clamp(_gDefault, _gMin, _gMax);
+            B = Clamp(_bDefault, _bMin, _bMax);
 
             Debug.WriteLine(
-                $"[LoadFrom GrayLevel] range 0x{_min:X3} -> 0x{_max:X3}, default=0x{_default:X3}, register={_registerName}");
+                $"[GrayColor LoadFrom] R: min={_rMin}, max={_rMax}, def={_rDefault}, reg={_rRegister}");
+            Debug.WriteLine(
+                $"[GrayColor LoadFrom] G: min={_gMin}, max={_gMax}, def={_gDefault}, reg={_gRegister}");
+            Debug.WriteLine(
+                $"[GrayColor LoadFrom] B: min={_bMin}, max={_bMax}, def={_bDefault}, reg={_bRegister}");
         }
 
-        private static int ReadHex(JObject obj, string name, int fallback)
+        private static int ReadInt(JObject field, string name, int fallback)
         {
-            if (obj == null)
+            if (field == null)
                 return fallback;
 
-            var token = obj[name];
+            var token = field[name];
             if (token == null)
                 return fallback;
 
-            var s = (string)token ?? string.Empty;
-            s = s.Trim();
-            if (s.Length == 0)
-                return fallback;
-
-            if (s.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                s = s.Substring(2);
+                return token.Value<int>();
             }
-
-            int v;
-            if (!int.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out v))
+            catch
+            {
                 return fallback;
-
-            return v;
+            }
         }
 
         private static int Clamp(int value, int min, int max)
@@ -133,14 +153,13 @@ namespace BistMode.ViewModels
         }
 
         /// <summary>
-        /// 寫入 10-bit GrayLevel 到 JSON 指定的 register
-        /// 由 RegControl.SetRegisterByName 處理實際暫存器細節
+        /// 將 R/G/B 寫入各自的 enable 暫存器（0 或 1）
         /// </summary>
         private void ExecuteWrite()
         {
             if (_cfg == null)
             {
-                MessageBox.Show("GrayLevel JSON 尚未載入。");
+                MessageBox.Show("GrayColor JSON 尚未載入。");
                 return;
             }
 
@@ -150,19 +169,23 @@ namespace BistMode.ViewModels
                 return;
             }
 
-            int clamped = Clamp(GrayLevel_Value, _min, _max);
-            if (clamped != GrayLevel_Value)
-            {
-                GrayLevel_Value = clamped; // 讓 UI 值也回到合法範圍
-            }
+            // 先 clamp，順便把 UI 的值也修正進合法範圍
+            var rVal = Clamp(R, _rMin, _rMax);
+            var gVal = Clamp(G, _gMin, _gMax);
+            var bVal = Clamp(B, _bMin, _bMax);
+
+            if (rVal != R) R = rVal;
+            if (gVal != G) G = gVal;
+            if (bVal != B) B = bVal;
 
             Debug.WriteLine(
-                $"[GrayLevel ExecuteWrite] val=0x{clamped:X3}, register={_registerName}");
+                $"[GrayColor ExecuteWrite] R={rVal}, G={gVal}, B={bVal}, " +
+                $"regR={_rRegister}, regG={_gRegister}, regB={_bRegister}");
 
-            // 新版：不再拆 low8/high2、不再使用 RegMap / writes 陣列
-            RegControl.SetRegisterByName(_registerName, (uint)clamped);
-
-            GrayLevelCache.SaveGrayLevel(clamped);
+            // 新版：不再使用 RegMap、mask、shift、writes[]
+            RegControl.SetRegisterByName(_rRegister, (uint)rVal);
+            RegControl.SetRegisterByName(_gRegister, (uint)gVal);
+            RegControl.SetRegisterByName(_bRegister, (uint)bVal);
         }
     }
 }
