@@ -9,157 +9,101 @@ using Utility.MVVM.Command;
 
 namespace BistMode.ViewModels
 {
-    public class GrayColorVM : ViewModelBase
+    public class GrayReverseVM : ViewModelBase
     {
-        private JObject _cfg;
+        private JObject _cfg;              // 記住 grayReverseControl JSON block
+        private string _registerName = "BIST_HGRAY_REV"; // 預設，實際由 JSON 覆蓋
 
-        // R/G/B 範圍與預設
-        private int _rMin = 0;
-        private int _rMax = 1;
-        private int _rDefault = 1;
-
-        private int _gMin = 0;
-        private int _gMax = 1;
-        private int _gDefault = 0;
-
-        private int _bMin = 0;
-        private int _bMax = 1;
-        private int _bDefault = 0;
-
-        // 各自對應的暫存器名稱（由 JSON 的 register 欄位決定）
-        private string _rRegister = "BIST_GRAY_R_EN";
-        private string _gRegister = "BIST_GRAY_G_EN";
-        private string _bRegister = "BIST_GRAY_B_EN";
-
-        public ObservableCollection<int> BoolOptions { get; } =
-            new ObservableCollection<int>(new[] { 0, 1 });
-
-        public int R
+        // Checkbox 綁定的值（true = 啟用）
+        public bool Enable
         {
-            get { return GetValue<int>(); }
+            get { return GetValue<bool>(); }
             set { SetValue(value); }
         }
 
-        public int G
+        public string Axis
         {
-            get { return GetValue<int>(); }
+            get { return GetValue<string>(); }
+            set
+            {
+                SetValue(value);
+                Title = Axis == "V"
+                    ? "Vertical Gray Reverse Enable"
+                    : "Horizontal Gray Reverse Enable";
+            }
+        }
+
+        public string Title
+        {
+            get { return GetValue<string>(); }
             set { SetValue(value); }
         }
 
-        public int B
-        {
-            get { return GetValue<int>(); }
-            set { SetValue(value); }
-        }
-
+        /// <summary>
+        /// 對應 RegControl.SetRegisterByName 用的介面
+        /// </summary>
         public IRegisterReadWriteEx RegControl { get; set; }
 
         public ICommand ApplyCommand { get; private set; }
 
-        public GrayColorVM()
+        public GrayReverseVM()
         {
             ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
+
+            // 若尚未載入 JSON，先給預設值
+            Axis = "H";
+            Enable = false;
         }
 
         /// <summary>
-        /// 從 grayColorControl JSON 讀取 fields.R/G/B 的 min/max/default/register
+        /// 從 grayReverseControl JSON 讀取 axis / default / register
+        /// （呼叫端傳進來的 jsonCfg 應該就是 grayReverseControl 這個物件）
         /// </summary>
         public void LoadFrom(object jsonCfg)
         {
             _cfg = jsonCfg as JObject;
-            var fields = _cfg?["fields"] as JObject;
-            if (fields == null)
+            if (_cfg == null)
                 return;
 
-            // ---------- R ----------
-            var rField = fields["R"] as JObject;
-            if (rField != null)
+            // axis: "H" / "V"
+            var axisToken = _cfg["axis"];
+            var axis = axisToken != null
+                ? axisToken.ToString().Trim().ToUpperInvariant()
+                : "H";
+            Axis = (axis == "V") ? "V" : "H";
+
+            // default: 0 / 1
+            int def = 0;
+            var defTok = _cfg["default"];
+            if (defTok != null)
             {
-                _rMin = ReadInt(rField, "min", 0);
-                _rMax = ReadInt(rField, "max", 1);
-                _rDefault = ReadInt(rField, "default", 1);
-
-                var regTok = rField["register"];
-                var regName = regTok != null ? (string)regTok : null;
-                if (!string.IsNullOrEmpty(regName))
-                    _rRegister = regName;
+                int tmp;
+                if (int.TryParse(defTok.ToString(), out tmp))
+                    def = tmp;
             }
+            Enable = (def != 0);
 
-            // ---------- G ----------
-            var gField = fields["G"] as JObject;
-            if (gField != null)
-            {
-                _gMin = ReadInt(gField, "min", 0);
-                _gMax = ReadInt(gField, "max", 1);
-                _gDefault = ReadInt(gField, "default", 0);
-
-                var regTok = gField["register"];
-                var regName = regTok != null ? (string)regTok : null;
-                if (!string.IsNullOrEmpty(regName))
-                    _gRegister = regName;
-            }
-
-            // ---------- B ----------
-            var bField = fields["B"] as JObject;
-            if (bField != null)
-            {
-                _bMin = ReadInt(bField, "min", 0);
-                _bMax = ReadInt(bField, "max", 1);
-                _bDefault = ReadInt(bField, "default", 0);
-
-                var regTok = bField["register"];
-                var regName = regTok != null ? (string)regTok : null;
-                if (!string.IsNullOrEmpty(regName))
-                    _bRegister = regName;
-            }
-
-            // 初始化目前值（依 JSON default）
-            R = Clamp(_rDefault, _rMin, _rMax);
-            G = Clamp(_gDefault, _gMin, _gMax);
-            B = Clamp(_bDefault, _bMin, _bMax);
+            // register: 直接指定要寫入的暫存器名稱
+            var regTok = _cfg["register"];
+            var regName = regTok != null ? regTok.ToString().Trim() : string.Empty;
+            if (!string.IsNullOrEmpty(regName))
+                _registerName = regName;
+            else
+                _registerName = "BIST_HGRAY_REV"; // 保底
 
             Debug.WriteLine(
-                $"[GrayColor LoadFrom] R: min={_rMin}, max={_rMax}, def={_rDefault}, reg={_rRegister}");
-            Debug.WriteLine(
-                $"[GrayColor LoadFrom] G: min={_gMin}, max={_gMax}, def={_gDefault}, reg={_gRegister}");
-            Debug.WriteLine(
-                $"[GrayColor LoadFrom] B: min={_bMin}, max={_bMax}, def={_bDefault}, reg={_bRegister}");
-        }
-
-        private static int ReadInt(JObject field, string name, int fallback)
-        {
-            if (field == null)
-                return fallback;
-
-            var token = field[name];
-            if (token == null)
-                return fallback;
-
-            try
-            {
-                return token.Value<int>();
-            }
-            catch
-            {
-                return fallback;
-            }
-        }
-
-        private static int Clamp(int value, int min, int max)
-        {
-            if (value < min) return min;
-            if (value > max) return max;
-            return value;
+                $"[GrayReverse LoadFrom] axis={Axis}, default={def}, register={_registerName}");
         }
 
         /// <summary>
-        /// 將 R/G/B 寫入各自的 enable 暫存器（0 或 1）
+        /// 將 Enable(0/1) 寫入 JSON 指定的 register
+        /// 不再使用 RegMap / RMW / writes[]。
         /// </summary>
         private void ExecuteWrite()
         {
             if (_cfg == null)
             {
-                MessageBox.Show("GrayColor JSON 尚未載入。");
+                MessageBox.Show("GrayReverse JSON 尚未載入。");
                 return;
             }
 
@@ -169,23 +113,13 @@ namespace BistMode.ViewModels
                 return;
             }
 
-            // 先 clamp，順便把 UI 的值也修正進合法範圍
-            var rVal = Clamp(R, _rMin, _rMax);
-            var gVal = Clamp(G, _gMin, _gMax);
-            var bVal = Clamp(B, _bMin, _bMax);
-
-            if (rVal != R) R = rVal;
-            if (gVal != G) G = gVal;
-            if (bVal != B) B = bVal;
+            uint val = Enable ? 1u : 0u;
 
             Debug.WriteLine(
-                $"[GrayColor ExecuteWrite] R={rVal}, G={gVal}, B={bVal}, " +
-                $"regR={_rRegister}, regG={_gRegister}, regB={_bRegister}");
+                $"[GrayReverse ExecuteWrite] axis={Axis}, enable={Enable}, register={_registerName}, val={val}");
 
-            // 新版：不再使用 RegMap、mask、shift、writes[]
-            RegControl.SetRegisterByName(_rRegister, (uint)rVal);
-            RegControl.SetRegisterByName(_gRegister, (uint)gVal);
-            RegControl.SetRegisterByName(_bRegister, (uint)bVal);
+            // 新版：直接透過 RegControl 寫入
+            RegControl.SetRegisterByName(_registerName, val);
         }
     }
 }
