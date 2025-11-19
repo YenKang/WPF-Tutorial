@@ -1,63 +1,84 @@
-<!-- 3-8) Chess BoardControl -->
-<GroupBox Header="Chessboard"
-          Visibility="{Binding IsChessBoardConfigVisible, Converter={utilityConv:BoolToVisibilityConverter}}"
-          Margin="0,8,0,0">
-    <StackPanel>
+using Newtonsoft.Json.Linq;
+using System.Windows.Input;
+using Utility.MVVM;
+using Utility.MVVM.Command;
 
-        <!-- Resolution：HRes / VRes 也改成 UpDown，可手 key -->
-        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-            <TextBlock Text="Resolution:" Width="100" VerticalAlignment="Center" />
+namespace BistMode.ViewModels
+{
+    public sealed class ExclamVM : ViewModelBase
+    {
+        private JObject _cfg;
 
-            <xctk:IntegerUpDown
-                Width="80" Height="24" Margin="0,0,4,0"
-                Minimum="720"
-                Maximum="6720"
-                Value="{Binding ChessBoardVM.HRes,
-                                Mode=TwoWay,
-                                UpdateSourceTrigger=PropertyChanged}" />
+        // 綁定 UI（勾 = White BG = 1）
+        public bool Enable
+        {
+            get => GetValue<bool>();
+            set => SetValue(value);
+        }
 
-            <TextBlock Text="×" Margin="0,0,4,0" VerticalAlignment="Center" />
+        // 套用
+        public ICommand ApplyCommand { get; }
 
-            <xctk:IntegerUpDown
-                Width="80" Height="24"
-                Minimum="136"
-                Maximum="2560"
-                Value="{Binding ChessBoardVM.VRes,
-                                Mode=TwoWay,
-                                UpdateSourceTrigger=PropertyChanged}" />
-        </StackPanel>
+        public ExclamVM()
+        {
+            ApplyCommand = CommandFactory.CreateCommand(ApplyWrite);
+        }
 
-        <!-- M / N：已經改成 UpDown -->
-        <StackPanel Orientation="Horizontal" Margin="0,4,0,10">
-            <TextBlock Text="M (H split):"
-                       Width="100"
-                       VerticalAlignment="Center" />
+        /// <summary>
+        /// 從 JSON 載入 ExclamControl 節點
+        /// {
+        ///    "register": "BIST_EXCLAM_BG",
+        ///    "default": 0
+        /// }
+        /// </summary>
+        public void LoadFrom(object jsonCfg)
+        {
+            if (jsonCfg is JObject jo)
+                _cfg = jo;
+            else if (jsonCfg != null)
+                _cfg = JObject.FromObject(jsonCfg);
+            else
+                return;
 
-            <xctk:IntegerUpDown
-                Width="60" Height="30"
-                Minimum="2"
-                Maximum="40"
-                Value="{Binding ChessBoardVM.M,
-                                Mode=TwoWay,
-                                UpdateSourceTrigger=PropertyChanged}" />
+            int def = (int?)_cfg["default"] ?? 0;
+            Enable = def != 0;
 
-            <TextBlock Text="N (V split):"
-                       Width="100"
-                       Margin="24,0,0,0"
-                       VerticalAlignment="Center" />
+            System.Diagnostics.Debug.WriteLine($"[Exclam] Load: default={def}, Enable={Enable}");
+        }
 
-            <xctk:IntegerUpDown
-                Width="60" Height="30"
-                Minimum="2"
-                Maximum="40"
-                Value="{Binding ChessBoardVM.N,
-                                Mode=TwoWay,
-                                UpdateSourceTrigger=PropertyChanged}" />
-        </StackPanel>
+        /// <summary>
+        /// 寫入暫存器
+        /// </summary>
+        private void ApplyWrite()
+        {
+            if (_cfg == null) return;
 
-        <!-- Set -->
+            string reg = (string)_cfg["register"];
+            if (string.IsNullOrWhiteSpace(reg)) return;
+
+            byte value = (byte)(Enable ? 1 : 0);
+            RegControl.SetRegisterByName(reg, value);
+
+            System.Diagnostics.Debug.WriteLine($"[Exclam] Write {reg} = {value}");
+        }
+    }
+}
+
+＝＝＝＝＝＝
+
+<GroupBox Header="Exclamation Background"
+          Margin="0,8,0,0"
+          Visibility="{Binding IsExclamVisible, Converter={utilityConv:BoolToVisibilityConverter}}">
+    <StackPanel Margin="12" Orientation="Vertical">
+
+        <!-- 勾選 = White BG = 1 -->
+        <CheckBox Content="Exclamation BG = White (unchecked = Black)"
+                  IsChecked="{Binding ExclamVM.Enable, Mode=TwoWay}" />
+
         <Button Content="Set"
-                Width="120"
-                Command="{Binding ChessBoardVM.ApplyCommand}" />
+                Width="80"
+                Height="30"
+                Margin="0,8,0,0"
+                Command="{Binding ExclamVM.ApplyCommand}" />
     </StackPanel>
 </GroupBox>
