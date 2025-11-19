@@ -1,7 +1,5 @@
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.ObjectModel;
-using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using Utility.MVVM;
@@ -20,14 +18,11 @@ namespace BistMode.ViewModels
         private int _nMin    = 2,   _nMax    = 40;
 
         // 從 JSON 讀到的暫存器名稱（H / V 分開）
+        // 對應 chessH.registers / chessV.registers
         private string _regToggleH = "BIST_CHESSBOARD_H_TOGGLE_W";
         private string _regPlus1H  = "BIST_CHESSBOARD_H_PLUS1_BLKNUM";
         private string _regToggleV = "BIST_CHESSBOARD_V_TOGGLE_H";
         private string _regPlus1V  = "BIST_CHESSBOARD_V_PLUS1_BLKNUM";
-
-        // 給 M/N ComboBox 使用
-        public ObservableCollection<int> MOptions { get; } = new ObservableCollection<int>();
-        public ObservableCollection<int> NOptions { get; } = new ObservableCollection<int>();
 
         private static int Clamp(int v, int min, int max)
         {
@@ -50,7 +45,7 @@ namespace BistMode.ViewModels
             set { SetValue(Clamp(value, _vResMin, _vResMax)); }
         }
 
-        // M / N：實際 clamp 放在 Apply() 再做一次
+        // M / N：實際 clamp 在 Apply() 再做一次
         public int M
         {
             get { return GetValue<int>(); }
@@ -79,8 +74,6 @@ namespace BistMode.ViewModels
             VRes = 720;
             M    = 5;
             N    = 7;
-
-            BuildOptions();
         }
 
         /// <summary>
@@ -96,7 +89,7 @@ namespace BistMode.ViewModels
                 // ---- fields: H_RES / V_RES / M / N ----
                 if (node["fields"] is JArray fields)
                 {
-                    foreach (JObject f in fields.Cast<JObject>())
+                    foreach (JObject f in fields)
                     {
                         string key = (string)f["key"];
                         int def = (int?)f["default"] ?? 0;
@@ -136,7 +129,7 @@ namespace BistMode.ViewModels
                 var chessH = node["chessH"] as JObject;
                 if (chessH != null && chessH["registers"] is JArray hRegs)
                 {
-                    foreach (JObject r in hRegs.Cast<JObject>())
+                    foreach (JObject r in hRegs)
                     {
                         foreach (var p in r.Properties())
                         {
@@ -144,9 +137,9 @@ namespace BistMode.ViewModels
                             var val = p.Value != null ? p.Value.ToString().Trim() : string.Empty;
                             if (string.IsNullOrEmpty(val)) continue;
 
+                            // 最終 JSON：Toggle_Width / H_PLUS1
                             switch (name)
                             {
-                                // 最終 JSON：Toggle_Width / H_PLUS1
                                 case "Toggle_Width": _regToggleH = val; break;
                                 case "H_PLUS1":      _regPlus1H  = val; break;
                             }
@@ -158,7 +151,7 @@ namespace BistMode.ViewModels
                 var chessV = node["chessV"] as JObject;
                 if (chessV != null && chessV["registers"] is JArray vRegs)
                 {
-                    foreach (JObject r in vRegs.Cast<JObject>())
+                    foreach (JObject r in vRegs)
                     {
                         foreach (var p in r.Properties())
                         {
@@ -166,51 +159,20 @@ namespace BistMode.ViewModels
                             var val = p.Value != null ? p.Value.ToString().Trim() : string.Empty;
                             if (string.IsNullOrEmpty(val)) continue;
 
+                            // 最終 JSON：Toggle_Height / V_PLUS1
                             switch (name)
                             {
-                                // 最終 JSON：Toggle_Height / V_PLUS1
                                 case "Toggle_Height": _regToggleV = val; break;
                                 case "V_PLUS1":       _regPlus1V  = val; break;
                             }
                         }
                     }
                 }
-
-                BuildOptions();
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Load json 發生錯誤: " + ex);
             }
-        }
-
-        /// <summary>
-        /// 產生 M / N ComboBox 選項
-        /// </summary>
-        private void BuildOptions()
-        {
-            int mStart = Math.Min(_mMin, _mMax);
-            int mEnd   = Math.Max(_mMin, _mMax);
-            int nStart = Math.Min(_nMin, _nMax);
-            int nEnd   = Math.Max(_nMin, _nMax);
-
-            // 若目前值超出範圍，就拉回合法範圍
-            if (M < mStart || M > mEnd) M = mStart;
-            if (N < nStart || N > nEnd) N = nStart;
-
-            MOptions.Clear();
-            for (int v = mStart; v <= mEnd; v++)
-                MOptions.Add(v);
-
-            NOptions.Clear();
-            for (int v = nStart; v <= nEnd; v++)
-                NOptions.Add(v);
-
-            // 防呆：避免空清單
-            if (MOptions.Count == 0)
-                for (int v = 2; v <= 40; v++) MOptions.Add(v);
-            if (NOptions.Count == 0)
-                for (int v = 2; v <= 40; v++) NOptions.Add(v);
         }
 
         /// <summary>
@@ -264,7 +226,7 @@ namespace BistMode.ViewModels
                 $"regH_Toggle={_regToggleH}, regH_Plus1={_regPlus1H}, " +
                 $"regV_Toggle={_regToggleV}, regV_Plus1={_regPlus1V}");
 
-            // 直接寫入暫存器（新 JSON 已經是一個功能對應一個暫存器）
+            // 直接寫入暫存器
             RegControl.SetRegisterByName(_regToggleH, (uint)th);
             RegControl.SetRegisterByName(_regPlus1H,  (uint)hPlus);
 
