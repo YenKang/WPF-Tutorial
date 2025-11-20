@@ -407,3 +407,74 @@ namespace BistMode.ViewModels
 }
 ```
 
+
+
+
+## xaml
+
+```
+<GroupBox Header="{Binding AutoRunVM.Title}" Margin="0,12,0,12">
+    <GroupBox.DataContext>
+        <Binding Path="AutoRunVM"/>
+    </GroupBox.DataContext>
+
+    <StackPanel Margin="12">
+
+        <!-- Pattern Total -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="Pattern Total"
+                       VerticalAlignment="Center"
+                       Margin="0,0,12,0"/>
+            <xctk:IntegerUpDown Width="90"
+                                Minimum="1"
+                                Maximum="21"
+                                Value="{Binding Total, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <!-- Pattern Orders -->
+        <ItemsControl ItemsSource="{Binding Orders}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <TextBlock Text="{Binding DisplayNo}"
+                                   VerticalAlignment="Center"
+                                   Width="32"/>
+                        <ComboBox Width="160"
+                                  ItemsSource="{Binding DataContext.PatternOptions,
+                                                RelativeSource={RelativeSource AncestorType=GroupBox}}"
+                                  DisplayMemberPath="Display"
+                                  SelectedValuePath="Index"
+                                  SelectedValue="{Binding SelectedIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- FCNT1 -->
+        <StackPanel Orientation="Horizontal" Margin="0,12,0,6">
+            <TextBlock Text="FCNT1"
+                       VerticalAlignment="Center"
+                       Margin="0,0,12,0"/>
+            <xctk:IntegerUpDown Width="120"
+                                Value="{Binding FCNT1_Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <!-- FCNT2 -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="FCNT2"
+                       VerticalAlignment="Center"
+                       Margin="0,0,12,0"/>
+            <xctk:IntegerUpDown Width="120"
+                                Value="{Binding FCNT2_Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <!-- Apply Button -->
+        <Button Content="Set Auto Run"
+                Width="140"
+                Height="32"
+                HorizontalAlignment="Left"
+                Command="{Binding ApplyCommand}"/>
+
+    </StackPanel>
+</GroupBox>
+```
