@@ -19,3 +19,12 @@ public class ColorPaletteReg
     public string RegName;   // e.g. "ICON_CP1_R03"
     public uint Data;        // 最終 register 數值
 }
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+public void ApplyColorPalette(Action<string, uint> writeReg)
+{
+    foreach (var cp in ColorPaletteRegList)
+    {
+        writeReg(cp.RegName, cp.Data);
+    }
+}
