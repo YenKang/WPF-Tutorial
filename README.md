@@ -331,3 +331,63 @@ namespace BistMode.ViewModels
         }
     }
 }
+＝＝＝＝
+
+<GroupBox Header="{Binding AutoRunVM.Title,
+                           RelativeSource={RelativeSource AncestorType=Window}}"
+          Margin="0,12,0,12">
+
+    <StackPanel Margin="12">
+
+        <!-- Pattern Total -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="Pattern Total"
+                       VerticalAlignment="Center"
+                       Margin="0,0,12,0"/>
+
+            <xctk:IntegerUpDown Width="90"
+                                Minimum="1"
+                                Maximum="22"
+                                Value="{Binding AutoRunVM.Total,
+                                                RelativeSource={RelativeSource AncestorType=Window},
+                                                Mode=TwoWay,
+                                                UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+
+        <!-- Pattern Orders -->
+        <ItemsControl ItemsSource="{Binding AutoRunVM.Orders,
+                                            RelativeSource={RelativeSource AncestorType=Window}}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+
+                        <TextBlock Text="{Binding DisplayNo}"
+                                   VerticalAlignment="Center"
+                                   Width="80"/>
+
+                        <ComboBox Width="96"
+                                  ItemsSource="{Binding AutoRunVM.PatternNumberOptions,
+                                                        RelativeSource={RelativeSource AncestorType=Window}}"
+                                  SelectedItem="{Binding SelectedPatternNumber,
+                                                         Mode=TwoWay,
+                                                         UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+
+        <!-- Apply -->
+        <Button Content="Set Auto Run"
+                Width="140"
+                Height="32"
+                HorizontalAlignment="Left"
+                Margin="0,12,0,0"
+                Command="{Binding AutoRunVM.ApplyCommand,
+                                  RelativeSource={RelativeSource AncestorType=Window}}"/>
+
+    </StackPanel>
+</GroupBox>
