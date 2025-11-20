@@ -1,3 +1,6 @@
+## Cursor
+
+```
 using Newtonsoft.Json.Linq;
 using System;
 using System.Windows;
@@ -7,132 +10,211 @@ using Utility.MVVM.Command;
 
 namespace BistMode.ViewModels
 {
-    /// <summary>
-    /// First Line Color：
-    /// Enable = true  → White (寫 1)
-    /// Enable = false → Black (寫 0)
-    ///
-    /// JSON:
-    /// "firstLineSelControl": {
-    ///     "register": "BIST_LINE_SEL",
-    ///     "default": 0
-    /// }
-    /// </summary>
-    public sealed class FirstLineVM : ViewModelBase
+    public sealed class CursorVM : ViewModelBase
     {
         private JObject _cfg;
 
-        // JSON 讀出的暫存器名稱 & 預設值
-        private string _registerName = "BIST_LINE_SEL";
-        private int _defaultValue = 0;
+        private string _regDiagonalEn = "BIST_DIAGONAL_EN";
+        private string _regCursorEn   = "BIST_CURSOR_EN";
+        private string _regHPos       = "BIST_CURSOR_HPOS";
+        private string _regVPos       = "BIST_CURSOR_VPOS";
 
-        /// <summary>
-        /// CheckBox 綁定：true = White, false = Black
-        /// </summary>
-        public bool Enable
+        private int _hMin = 0, _hMax = 6720, _hDefault = 960;
+        private int _vMin = 0, _vMax = 2560, _vDefault = 360;
+
+        public bool DiagonalEnable
         {
             get { return GetValue<bool>(); }
             set { SetValue(value); }
         }
 
-        /// <summary>
-        /// 寫暫存器用 Command（綁 Set）
-        /// </summary>
+        public bool CursorEnable
+        {
+            get { return GetValue<bool>(); }
+            set { SetValue(value); }
+        }
+
+        public int HPos
+        {
+            get { return GetValue<int>(); }
+            set { SetValue(value); }
+        }
+
+        public int VPos
+        {
+            get { return GetValue<int>(); }
+            set { SetValue(value); }
+        }
+
         public ICommand ApplyCommand { get; private set; }
 
-        /// <summary>
-        /// 暫存器讀寫介面（外部注入）
-        /// </summary>
         public PageBase.ICStructure.Comm.IRegisterReadWriteEx RegControl { get; set; }
 
-        public FirstLineVM()
+        public CursorVM()
         {
             ApplyCommand = CommandFactory.CreateCommand(ExecuteWrite);
         }
 
-        /// <summary>
-        /// 從 JSON 載入：
-        /// 可以丟整個 pattern node 或只丟 firstLineSelControl block。
-        /// </summary>
         public void LoadFrom(object jsonCfg)
         {
             _cfg = jsonCfg as JObject;
             var root = _cfg;
             if (root == null) return;
 
-            // 1) { "firstLineSelControl": {...} }
-            // 2) { "register": "...", "default": 0 }
-            var ctrl = root["firstLineSelControl"] as JObject ?? root;
+            var ctrl   = root["cursorControl"] as JObject ?? root;
+            var fields = ctrl["fields"] as JObject;
+            if (fields == null) return;
 
-            // 讀 register 名稱
-            var regTok = ctrl["register"];
-            if (regTok != null)
+            // diagonalEn
+            var diagonalNode = fields["diagonalEn"] as JObject;
+            if (diagonalNode != null)
             {
-                var s = regTok.ToString().Trim();
-                if (!string.IsNullOrEmpty(s))
-                    _registerName = s;
+                var regTok = diagonalNode["register"];
+                if (regTok != null)
+                {
+                    var s = regTok.ToString().Trim();
+                    if (!string.IsNullOrEmpty(s))
+                        _regDiagonalEn = s;
+                }
+
+                int def = (int?)diagonalNode["default"] ?? 0;
+                DiagonalEnable = def != 0;
             }
 
-            // 讀 default：0 = Black, 1 = White
-            int def = 0;
-            var defTok = ctrl["default"];
-            if (defTok != null)
+            // cursorEn
+            var cursorEnNode = fields["cursorEn"] as JObject;
+            if (cursorEnNode != null)
             {
-                int tmp;
-                if (int.TryParse(defTok.ToString(), out tmp))
-                    def = tmp;
+                var regTok = cursorEnNode["register"];
+                if (regTok != null)
+                {
+                    var s = regTok.ToString().Trim();
+                    if (!string.IsNullOrEmpty(s))
+                        _regCursorEn = s;
+                }
+
+                int def = (int?)cursorEnNode["default"] ?? 0;
+                CursorEnable = def != 0;
             }
 
-            _defaultValue = def;
-            Enable = (_defaultValue != 0);
+            // hPos
+            var hPosNode = fields["hPos"] as JObject;
+            if (hPosNode != null)
+            {
+                var regTok = hPosNode["register"];
+                if (regTok != null)
+                {
+                    var s = regTok.ToString().Trim();
+                    if (!string.IsNullOrEmpty(s))
+                        _regHPos = s;
+                }
+
+                _hMin     = (int?)hPosNode["min"]     ?? _hMin;
+                _hMax     = (int?)hPosNode["max"]     ?? _hMax;
+                _hDefault = (int?)hPosNode["default"] ?? _hDefault;
+
+                HPos = Clamp(_hDefault, _hMin, _hMax);
+            }
+
+            // vPos
+            var vPosNode = fields["vPos"] as JObject;
+            if (vPosNode != null)
+            {
+                var regTok = vPosNode["register"];
+                if (regTok != null)
+                {
+                    var s = regTok.ToString().Trim();
+                    if (!string.IsNullOrEmpty(s))
+                        _regVPos = s;
+                }
+
+                _vMin     = (int?)vPosNode["min"]     ?? _vMin;
+                _vMax     = (int?)vPosNode["max"]     ?? _vMax;
+                _vDefault = (int?)vPosNode["default"] ?? _vDefault;
+
+                VPos = Clamp(_vDefault, _vMin, _vMax);
+            }
 
             System.Diagnostics.Debug.WriteLine(
-                $"[FirstLine LoadFrom] register={_registerName}, default={_defaultValue}, Enable={Enable}");
+                $"[Cursor Load] diagEn={DiagonalEnable}, curEn={CursorEnable}, " +
+                $"HPos={HPos} [{_hMin},{_hMax}], VPos={VPos} [{_vMin},{_vMax}]");
         }
 
-        /// <summary>
-        /// 按下 Set：true→1、false→0，寫入 BIST_LINE_SEL
-        /// </summary>
         private void ExecuteWrite()
         {
-            if (_cfg == null)
-            {
-                MessageBox.Show("FirstLineVM: JSON 尚未載入。");
-                return;
-            }
-
             if (RegControl == null)
             {
-                MessageBox.Show("FirstLineVM: RegControl 尚未注入。");
+                MessageBox.Show("CursorVM: RegControl 尚未注入。");
                 return;
             }
 
-            int val = Enable ? 1 : 0;
+            int h = Clamp(HPos, _hMin, _hMax);
+            int v = Clamp(VPos, _vMin, _vMax);
+            int diagVal = DiagonalEnable ? 1 : 0;
+            int curVal  = CursorEnable   ? 1 : 0;
 
             System.Diagnostics.Debug.WriteLine(
-                $"[FirstLine Apply] Enable={Enable}, val={val}, reg={_registerName}");
+                $"[Cursor Apply] diagEn={diagVal}, curEn={curVal}, H={h}, V={v}");
 
-            RegControl.SetRegisterByName(_registerName, (uint)val);
+            // 一律寫入（符合你之前「永遠寫」的規則）
+            RegControl.SetRegisterByName(_regDiagonalEn, (uint)diagVal);
+            RegControl.SetRegisterByName(_regCursorEn,   (uint)curVal);
+            RegControl.SetRegisterByName(_regHPos,       (uint)h);
+            RegControl.SetRegisterByName(_regVPos,       (uint)v);
+        }
+
+        private static int Clamp(int v, int min, int max)
+        {
+            if (v < min) return min;
+            if (v > max) return max;
+            return v;
         }
     }
 }
+```
 
-=======
+## Cusor xaml
 
-<GroupBox Header="First Line Color"
-          Margin="0,8,0,0"
-          Visibility="{Binding IsFirstLineVisible,
-                               Converter={utilityConv:BoolToVisibilityConverter}}">
-    <StackPanel Margin="12" Orientation="Vertical">
+```
+<GroupBox Header="Cursor Control" Margin="0,8,0,0">
+    <StackPanel Margin="12">
 
-        <CheckBox Content="First Line Color = White (unchecked = Black)"
-                  IsChecked="{Binding FirstLineVM.Enable, Mode=TwoWay}" />
+        <!-- Diagonal -->
+        <CheckBox Content="Diagonal Enable"
+                  IsChecked="{Binding CursorVM.DiagonalEnable, Mode=TwoWay}" />
 
+        <!-- Cursor Enable -->
+        <CheckBox Content="Cursor Configurable Enable"
+                  Margin="0,4,0,0"
+                  IsChecked="{Binding CursorVM.CursorEnable, Mode=TwoWay}" />
+
+        <!-- H Pos -->
+        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBlock Text="Cursor H Pos:" Width="100" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown Width="80"
+                                Minimum="0"
+                                Maximum="6720"
+                                Value="{Binding CursorVM.HPos, Mode=TwoWay}"
+                                IsEnabled="{Binding CursorVM.CursorEnable}" />
+        </StackPanel>
+
+        <!-- V Pos -->
+        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+            <TextBlock Text="Cursor V Pos:" Width="100" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown Width="80"
+                                Minimum="0"
+                                Maximum="2560"
+                                Value="{Binding CursorVM.VPos, Mode=TwoWay}"
+                                IsEnabled="{Binding CursorVM.CursorEnable}" />
+        </StackPanel>
+
+        <!-- Set -->
         <Button Content="Set"
                 Width="80"
                 Height="30"
-                Margin="0,8,0,0"
+                Margin="0,10,0,0"
                 HorizontalAlignment="Left"
-                Command="{Binding FirstLineVM.ApplyCommand}" />
+                Command="{Binding CursorVM.ApplyCommand}" />
     </StackPanel>
 </GroupBox>
+```
