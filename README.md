@@ -1,29 +1,3 @@
-<!-- 🔹 FCNT1 -->
-<StackPanel Orientation="Horizontal" Margin="0,12,0,4">
-    <TextBlock Text="FCNT1"
-               VerticalAlignment="Center"
-               Margin="0,0,8,0" />
-
-    <xctk:IntegerUpDown Width="120"
-                        Value="{Binding FCNT1_Value,
-                                        Mode=TwoWay,
-                                        UpdateSourceTrigger=PropertyChanged}"/>
-</StackPanel>
-
-<!-- 🔹 FCNT2 -->
-<StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-    <TextBlock Text="FCNT2"
-               VerticalAlignment="Center"
-               Margin="0,0,8,0" />
-
-    <xctk:IntegerUpDown Width="120"
-                        Value="{Binding FCNT2_Value,
-                                        Mode=TwoWay,
-                                        UpdateSourceTrigger=PropertyChanged}"/>
-</StackPanel>
-
-=================
-
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -36,16 +10,11 @@ namespace BistMode.ViewModels
 {
     public sealed class AutoRunVM : ViewModelBase
     {
-        private const int TotalMin     = 1;
-        private const int TotalMax     = 22;
         private const int TotalDefault = 22;
 
         private string _totalRegister;
-
-        // JSON 給的 patternOrder.register 名稱，例如 BIST_PT_ORD0 ~ BIST_PT_ORD21
         private readonly List<string> _orderTargets = new List<string>();
 
-        // FCNT1 / FCNT2 設定
         private readonly FcntConfig _fcnt1 = new FcntConfig();
         private readonly FcntConfig _fcnt2 = new FcntConfig();
 
@@ -53,21 +22,17 @@ namespace BistMode.ViewModels
 
         public AutoRunVM()
         {
-            Debug.WriteLine("[AutoRun] Ctor");
-
             ApplyCommand = CommandFactory.CreateCommand(ApplyWrite);
 
-            // ComboBox 選項：0~21
+            // ComboBox 選項 0~21
             PatternNumberOptions = new ObservableCollection<int>();
             for (int i = 0; i <= 21; i++)
-            {
                 PatternNumberOptions.Add(i);
-            }
 
             Total = TotalDefault;
         }
 
-        #region Public Properties
+        #region Properties
 
         public string Title
         {
@@ -76,61 +41,46 @@ namespace BistMode.ViewModels
         }
 
         /// <summary>
-        /// Pattern Total：1~22，只決定要寫幾筆 ORD，不動 Orders 行數。
+        /// Pattern Total：由 XAML UpDown 控制 1~22，不另外 clamp。
+        /// 只影響「要寫幾筆 ORD」。
         /// </summary>
         public int Total
         {
             get { return GetValue<int>(); }
             set
             {
-                var raw = value;
-                var v   = Clamp(raw, TotalMin, TotalMax);
-                var old = GetValue<int>();
-
-                if (!SetValue(v)) return;
-
-                Debug.WriteLine($"[AutoRun] Total changed: old={old}, ui={raw}, clamped={v}");
+                if (!SetValue(value)) return;
+                Debug.WriteLine($"[AutoRun] Total = {value}");
             }
         }
 
-        /// <summary>
-        /// 每一列 Pattern Order slot（通常 22 列）
-        /// </summary>
         public ObservableCollection<OrderSlot> Orders { get; }
             = new ObservableCollection<OrderSlot>();
 
         /// <summary>
-        /// ComboBox 選項：0~21
+        /// 每列 ComboBox 的選項 0~21。
         /// </summary>
         public ObservableCollection<int> PatternNumberOptions { get; }
 
-        /// <summary>
-        /// FCNT1 的值（會 clamp 在 JSON min/max 範圍）
-        /// </summary>
         public int FCNT1_Value
         {
             get { return GetValue<int>(); }
             set
             {
-                var v = Clamp(value, _fcnt1.Min, _fcnt1.Max);
-                if (!SetValue(v)) return;
-                _fcnt1.Value = v;
-                Debug.WriteLine($"[AutoRun] FCNT1_Value set to {v} (min={_fcnt1.Min}, max={_fcnt1.Max})");
+                if (!SetValue(value)) return;
+                _fcnt1.Value = value;
+                Debug.WriteLine($"[AutoRun] FCNT1_Value = {value}");
             }
         }
 
-        /// <summary>
-        /// FCNT2 的值（會 clamp 在 JSON min/max 範圍）
-        /// </summary>
         public int FCNT2_Value
         {
             get { return GetValue<int>(); }
             set
             {
-                var v = Clamp(value, _fcnt2.Min, _fcnt2.Max);
-                if (!SetValue(v)) return;
-                _fcnt2.Value = v;
-                Debug.WriteLine($"[AutoRun] FCNT2_Value set to {v} (min={_fcnt2.Min}, max={_fcnt2.Max})");
+                if (!SetValue(value)) return;
+                _fcnt2.Value = value;
+                Debug.WriteLine($"[AutoRun] FCNT2_Value = {value}");
             }
         }
 
@@ -142,43 +92,28 @@ namespace BistMode.ViewModels
 
         public void LoadFrom(JObject autoRunControl)
         {
-            Debug.WriteLine("===== [AutoRun] LoadFrom() start =====");
+            Debug.WriteLine("===== [AutoRun] LoadFrom start =====");
 
             if (autoRunControl == null)
             {
-                Debug.WriteLine("[AutoRun] LoadFrom() aborted: autoRunControl == null");
+                Debug.WriteLine("[AutoRun] autoRunControl == null");
                 return;
             }
 
             Title = (string)autoRunControl["title"] ?? "Auto Run";
-            Debug.WriteLine($"[AutoRun] Title = {Title}");
 
-            // total 區
+            // total
             var t = autoRunControl["total"] as JObject;
             if (t != null)
             {
                 _totalRegister = (string)t["register"] ?? string.Empty;
-
-                int def = t["default"] != null
-                    ? t["default"].Value<int>()
-                    : TotalDefault;
-
-                Total = Clamp(def, TotalMin, TotalMax);
-
-                Debug.WriteLine(
-                    $"[AutoRun] TotalRegister={_totalRegister}, Default={def}, AfterClamp={Total}"
-                );
-            }
-            else
-            {
-                Debug.WriteLine("[AutoRun] total section missing, use default.");
-                _totalRegister = string.Empty;
-                Total          = TotalDefault;
+                var def = t["default"] != null ? t["default"].Value<int>() : TotalDefault;
+                Total = def;
+                Debug.WriteLine($"[AutoRun] TotalReg={_totalRegister}, Default={def}");
             }
 
-            // patternOrder.register → 只拿 register 名稱，不再吃 JSON 的 default 值
+            // patternOrder.register → 只吃 register 名稱
             _orderTargets.Clear();
-            Debug.WriteLine("[AutoRun] Parsing patternOrder.register...");
 
             var order    = autoRunControl["patternOrder"] as JObject;
             var regArray = order != null ? order["register"] as JArray : null;
@@ -189,27 +124,18 @@ namespace BistMode.ViewModels
                 {
                     var prop = jo.Properties().FirstOrDefault();
                     if (prop == null) continue;
-
-                    var regName = prop.Name;  // e.g. BIST_PT_ORD0
-                    _orderTargets.Add(regName);
+                    _orderTargets.Add(prop.Name);   // e.g. BIST_PT_ORD0
                 }
             }
-            else
-            {
-                Debug.WriteLine("[AutoRun] patternOrder.register not found or empty.");
-            }
 
-            // 如果 JSON 沒給任何 register，就用預設 BIST_PT_ORD0~21
+            // fallback：沒給就用 BIST_PT_ORD0~21
             if (_orderTargets.Count == 0)
             {
-                Debug.WriteLine("[AutoRun] _orderTargets empty, fallback to BIST_PT_ORD0~21.");
                 for (int i = 0; i < 22; i++)
-                {
                     _orderTargets.Add($"BIST_PT_ORD{i}");
-                }
             }
 
-            // 讀取 fcnt1
+            // fcnt1
             var f1 = autoRunControl["fcnt1"] as JObject;
             if (f1 != null)
             {
@@ -217,19 +143,10 @@ namespace BistMode.ViewModels
                 _fcnt1.Min     = ParseHex((string)f1["min"],     0x01E);
                 _fcnt1.Max     = ParseHex((string)f1["max"],     0x258);
                 _fcnt1.Value   = ParseHex((string)f1["default"], 0x03C);
-
-                FCNT1_Value = _fcnt1.Value;
-
-                Debug.WriteLine(
-                    $"[AutoRun] FCNT1: Reg={_fcnt1.RegName}, Min=0x{_fcnt1.Min:X}, Max=0x{_fcnt1.Max:X}, Default=0x{_fcnt1.Value:X}"
-                );
-            }
-            else
-            {
-                Debug.WriteLine("[AutoRun] fcnt1 not found in JSON.");
+                FCNT1_Value    = _fcnt1.Value;
             }
 
-            // 讀取 fcnt2
+            // fcnt2
             var f2 = autoRunControl["fcnt2"] as JObject;
             if (f2 != null)
             {
@@ -237,66 +154,46 @@ namespace BistMode.ViewModels
                 _fcnt2.Min     = ParseHex((string)f2["min"],     0x01E);
                 _fcnt2.Max     = ParseHex((string)f2["max"],     0x258);
                 _fcnt2.Value   = ParseHex((string)f2["default"], 0x01E);
-
-                FCNT2_Value = _fcnt2.Value;
-
-                Debug.WriteLine(
-                    $"[AutoRun] FCNT2: Reg={_fcnt2.RegName}, Min=0x{_fcnt2.Min:X}, Max=0x{_fcnt2.Max:X}, Default=0x{_fcnt2.Value:X}"
-                );
-            }
-            else
-            {
-                Debug.WriteLine("[AutoRun] fcnt2 not found in JSON.");
+                FCNT2_Value    = _fcnt2.Value;
             }
 
-            // 一次性建立 Orders，並印出你截圖那種 log
-            BuildOrdersFromTargets();
+            BuildOrdersOnce();
 
-            Debug.WriteLine("===== [AutoRun] LoadFrom() end =====");
+            Debug.WriteLine("===== [AutoRun] LoadFrom end =====");
         }
 
-        /// <summary>
-        /// 根據 _orderTargets 一次性建立 Orders：
-        ///  PatternOrder[1] → RegName=BIST_PT_ORD0, DefaultNum=0
-        ///  PatternOrder[2] → RegName=BIST_PT_ORD1, DefaultNum=1
-        ///  ...
-        ///  PatternOrder[22] → RegName=BIST_PT_ORD21, DefaultNum=21
-        /// </summary>
-        private void BuildOrdersFromTargets()
+        private void BuildOrdersOnce()
         {
             Orders.Clear();
 
-            int count = _orderTargets.Count;
+            var count = _orderTargets.Count;
             if (count > 22) count = 22;
 
             for (int i = 0; i < count; i++)
             {
-                int displayIndex = i + 1; // PatternOrder[1..22]
-                string regName   = _orderTargets[i];
-                int defaultNum   = i;     // 0~21
+                var displayNo = i + 1;
+                var regName   = _orderTargets[i];
+                var defaultNum = i; // 0~21
 
-                var slot = new OrderSlot
+                Orders.Add(new OrderSlot
                 {
-                    DisplayNo             = displayIndex,
+                    DisplayNo             = displayNo,
                     RegName               = regName,
                     SelectedPatternNumber = defaultNum
-                };
-
-                Orders.Add(slot);
+                });
 
                 Debug.WriteLine(
-                    $"[AutoRun] PatternOrder[{displayIndex}]  RegName={regName}, DefaultNum={defaultNum}"
-                );
+                    $"[AutoRun] PatternOrder[{displayNo}] RegName={regName}, DefaultNum={defaultNum}");
             }
         }
 
         #endregion
 
-        #region Apply Write
+        #region Apply
 
         private void ApplyWrite()
         {
-            Debug.WriteLine("===== [AutoRun] ApplyWrite() start =====");
+            Debug.WriteLine("===== [AutoRun] ApplyWrite start =====");
 
             if (RegControl == null)
             {
@@ -304,78 +201,57 @@ namespace BistMode.ViewModels
                 return;
             }
 
-            Debug.WriteLine($"[AutoRun] ApplyWrite() with Total={Total}");
-
-            // (1) TOTAL：仍用 (Total - 1) 規則，但不做 bit mask
+            // 1) TOTAL：仍採用 (Total - 1)，不再 mask
             if (!string.IsNullOrEmpty(_totalRegister))
             {
-                int t = Total - 1;
+                var t = Total - 1;
                 if (t < 0) t = 0;
 
-                uint totalRaw = (uint)t;
-
+                var totalRaw = (uint)t;
                 Debug.WriteLine(
-                    $"[AutoRun] Write TOTAL: Reg={_totalRegister}, RawValue(dec)={totalRaw}, Hex=0x{totalRaw:X2}"
-                );
+                    $"[AutoRun] TOTAL Reg={_totalRegister}, Raw={totalRaw} (0x{totalRaw:X2})");
 
                 RegControl.SetRegisterByName(_totalRegister, totalRaw);
             }
-            else
-            {
-                Debug.WriteLine("[AutoRun] WARNING: _totalRegister is empty, TOTAL not written.");
-            }
 
-            // (2) ORD：完全 raw（不 clamp、不 mask）
-            int limit = Math.Min(Total, Orders.Count);
-            Debug.WriteLine($"[AutoRun] ORD limit = {limit} (Orders.Count={Orders.Count})");
+            // 2) ORD：完全 raw（不 clamp、不 mask）
+            var limit = Math.Min(Total, Orders.Count);
 
             for (int i = 0; i < limit; i++)
             {
-                var slot = Orders[i];
-
-                int raw = slot.SelectedPatternNumber; // 完全 raw
-                uint finalValue = (uint)raw;
+                var slot      = Orders[i];
+                var raw       = slot.SelectedPatternNumber;
+                var finalValue = (uint)raw;
 
                 Debug.WriteLine(
-                    $"[AutoRun] ORD[{i}] Reg={slot.RegName}, RawNum={raw}, WriteRaw=0x{finalValue:X2}"
-                );
+                    $"[AutoRun] ORD[{i}] Reg={slot.RegName}, RawNum={raw}, Write=0x{finalValue:X2}");
 
                 RegControl.SetRegisterByName(slot.RegName, finalValue);
             }
 
-            // (3) FCNT1 / FCNT2：用 JSON min/max clamp 後的值寫入（避免超出 spec）
+            // 3) FCNT1 / FCNT2：使用目前 FCNT*_Value raw 寫入
             if (!string.IsNullOrEmpty(_fcnt1.RegName))
             {
-                uint v1 = (uint)_fcnt1.Value;
+                var v1 = (uint)FCNT1_Value;
                 Debug.WriteLine(
-                    $"[AutoRun] Write FCNT1: Reg={_fcnt1.RegName}, Value(dec)={v1}, Hex=0x{v1:X3}"
-                );
+                    $"[AutoRun] FCNT1 Reg={_fcnt1.RegName}, Value={FCNT1_Value} (0x{v1:X3})");
                 RegControl.SetRegisterByName(_fcnt1.RegName, v1);
             }
 
             if (!string.IsNullOrEmpty(_fcnt2.RegName))
             {
-                uint v2 = (uint)_fcnt2.Value;
+                var v2 = (uint)FCNT2_Value;
                 Debug.WriteLine(
-                    $"[AutoRun] Write FCNT2: Reg={_fcnt2.RegName}, Value(dec)={v2}, Hex=0x{v2:X3}"
-                );
+                    $"[AutoRun] FCNT2 Reg={_fcnt2.RegName}, Value={FCNT2_Value} (0x{v2:X3})");
                 RegControl.SetRegisterByName(_fcnt2.RegName, v2);
             }
 
-            Debug.WriteLine("===== [AutoRun] ApplyWrite() end =====");
+            Debug.WriteLine("===== [AutoRun] ApplyWrite end =====");
         }
 
         #endregion
 
         #region Helpers
-
-        private static int Clamp(int value, int min, int max)
-        {
-            if (min == 0 && max == 0) return value; // 如果 min/max 還沒初始化，就當作 raw
-            if (value < min) return min;
-            if (value > max) return max;
-            return value;
-        }
 
         private static int ParseHex(string s, int fallback)
         {
@@ -409,7 +285,7 @@ namespace BistMode.ViewModels
         }
 
         /// <summary>
-        /// ComboBox 選到的數字（0~21），直接拿來當暫存器值。
+        /// ComboBox 選到的數字（0~21），直接 raw 寫暫存器。
         /// </summary>
         public int SelectedPatternNumber
         {
@@ -417,9 +293,6 @@ namespace BistMode.ViewModels
             set { SetValue(value); }
         }
 
-        /// <summary>
-        /// 對應 JSON patternOrder.register 的暫存器名稱（例如 BIST_PT_ORD0）。
-        /// </summary>
         public string RegName
         {
             get { return GetValue<string>(); }
@@ -427,9 +300,6 @@ namespace BistMode.ViewModels
         }
     }
 
-    /// <summary>
-    /// FCNT 設定封裝
-    /// </summary>
     public sealed class FcntConfig
     {
         public string RegName;
