@@ -1,139 +1,77 @@
-## Step 1：建立 BWLoopModel.cs
+## ApplyPatternToGroups 
+```
+if (p.BWLoopModel != null)
+{
+    IsBWLoopVisible = true;
+    BWLoopVM.SetModel(p.BWLoopModel);
+}
+else
+{
+    IsBWLoopVisible = false;
+    BWLoopVM.SetModel(null);
+}
+```
+
+## Step2:
 
 ```
-// Models/BWLoopModel.cs
-namespace BistMode.Models
+public void SetModel(BWLoopModel model)
 {
-    public sealed class BWLoopModel
-    {
-        // UI 要調整的數值（最後會寫進暫存器）
-        public int Fcnt2 { get; set; }
+    _model = model;
 
-        // 要寫的暫存器名稱，例如 "BIST_FCNT2"
-        public string RegName { get; set; }
+    if (_model == null)
+    {
+        // 沒有 model 時，把 UI 清掉
+        Fcnt2    = 0;
+        Fcnt2Min = 0;
+        Fcnt2Max = 0;
+        RegName  = string.Empty;
+        return;
+    }
+
+    // Model → VM（把目前這張圖的狀態推到 UI）
+    RegName  = _model.RegName;
+    Fcnt2Min = _model.Fcnt2Min;
+    Fcnt2Max = _model.Fcnt2Max;
+    Fcnt2    = _model.Fcnt2;
+}
+```
+
+## UI 變動 寫回model
+
+```
+public int Fcnt2
+{
+    get { return GetValue<int>(); }
+    set
+    {
+        if (!SetValue(value)) return;
+
+        // ⭐ 只要 UI 有變動，就寫回 Model
+        if (_model != null)
+            _model.Fcnt2 = value;
     }
 }
 ```
 
-## Step 2：Pattern 裡要有一顆 BWLoopModel in BistodeViewModel.cs
 
+## 寫值
 ```
-// Pattern.cs
-using BistMode.Models;
-
-public sealed class Pattern
+private void ApplyWrite()
 {
-    public int Index { get; set; }
-    public string Name { get; set; }
+    if (_model == null) return;
+    if (_regControl == null) return;
+    if (string.IsNullOrEmpty(RegName)) return;
 
-    // 這張圖對應的 BWLoop model（如果有 BWLoop 控制）
-    public BWLoopModel BWLoop { get; set; }
-}
-```
+    uint raw = (uint)_model.Fcnt2;
 
-## Step3:在 LoadFileFrom() 裡，從 JObject bwLoopControl → 填 BWLoopModel in BWLoopVM.cs
-
-
-```
-"BWLoopControl": {
-  "register": "BIST_FCNT2",
-  "default": "03E"
+    // ⭐ 真正寫暫存器，RegName 會是 "BIST_FCNT2"
+    _regControl.SetRegisterByName(RegName, raw);
 }
 ```
 
 
-## step4: BistModeViewModel.LoadFileFrom() 裡，對每一個 pattern node 做解析時，多加一段「解析 BWLoopControl」：
-
-
-```
-private void LoadFileFrom(string profilePath)
-{
-    var json = File.ReadAllText(profilePath);
-    var root = JObject.Parse(json);
-
-    var patterns = root["patterns"] as JArray;
-    if (patterns == null) return;
-
-    PatternList.Clear();
-
-    foreach (var item in patterns.OfType<JObject>())
-    {
-        var p = new Pattern();
-        p.Index = item["index"] != null ? item["index"].Value<int>() : 0;
-        p.Name  = (string)item["name"] ?? string.Empty;
-
-        // ⭐ 這一段是 BWLoop 的解析
-        var bwLoopControl = item["BWLoopControl"] as JObject;
-        if (bwLoopControl != null)
-        {
-            // 1) 暫存器名字（例如 "BIST_FCNT2"）
-            var regName = (string)bwLoopControl["register"] ?? string.Empty;
-
-            // 2) default 值（例如 "03E"）
-            var defText = (string)bwLoopControl["default"] ?? "0";
-            int defValue = ParseHex(defText, 0);   // 轉成 int
-
-            p.BWLoop = new BWLoopModel
-            {
-                RegName = regName,
-                Fcnt2   = defValue
-            };
-        }
-
-        PatternList.Add(p);
-    }
-}
-
-// 小工具：把 "03E"/"0x03E" → int
-private static int ParseHex(string text, int fallback)
-{
-    if (string.IsNullOrWhiteSpace(text)) return fallback;
-
-    text = text.Trim();
-    if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-        text = text.Substring(2);
-
-    int value;
-    if (int.TryParse(text,
-                     System.Globalization.NumberStyles.HexNumber,
-                     null,
-                     out value))
-    {
-        return value;
-    }
-
-    return fallback;
-}
-```
-
-
-## Step5: 建立實體: 所以 ApplyPatternToGroups 裡 BWLoop 這一段要改成：
-
-
-```
-private void ApplyPatternToGroups(Pattern p)
-{
-    // BWLoop
-    if (p.BWLoop != null)
-    {
-        IsBWLoopVisible = true;
-        BWLoopVM.SetModel(p.BWLoop);   // ⬅ 改成傳「model 實體」
-    }
-    else
-    {
-        IsBWLoopVisible = false;
-        BWLoopVM.SetModel(null);       // 避免殘留舊值（可加可不加，看你習慣）
-    }
-
-    // GrayLevel / Cursor 之後也會用一樣的 pattern：
-    // if (p.GrayLevel != null) GrayLevelVM.SetModel(p.GrayLevel);
-    // if (p.Cursor    != null) CursorVM.SetModel(p.Cursor);
-}
-```
-
-
-## Step6: BWLoopVM.cs
-
+## 完整版
 
 ```
 using BistMode.Models;
@@ -152,29 +90,35 @@ namespace BistMode.ViewModels
             ApplyCommand = CommandFactory.CreateCommand(ApplyWrite);
         }
 
+        // 給 BistModeViewModel 呼叫
         public void SetRegisterControl(IRegisterReadWriteEx regControl)
         {
             _regControl = regControl;
         }
 
-        // ⭐ VM 接 Model 實體
+        // ⭐ 核心：切換圖片時，把該圖的 Model 塞進來
         public void SetModel(BWLoopModel model)
         {
             _model = model;
 
             if (_model == null)
             {
-                Fcnt2 = 0;
-                RegName = string.Empty;
+                Fcnt2    = 0;
+                Fcnt2Min = 0;
+                Fcnt2Max = 0;
+                RegName  = string.Empty;
                 return;
             }
 
-            // 反映 Model 的值到 UI
-            Fcnt2   = _model.Fcnt2;
-            RegName = _model.RegName;
+            // Model → VM
+            RegName  = _model.RegName;
+            Fcnt2Min = _model.Fcnt2Min;
+            Fcnt2Max = _model.Fcnt2Max;
+            Fcnt2    = _model.Fcnt2;
         }
 
-        // ⭐ UI 綁定用
+        // ====== UI 綁定屬性 ======
+
         public int Fcnt2
         {
             get { return GetValue<int>(); }
@@ -182,12 +126,24 @@ namespace BistMode.ViewModels
             {
                 if (!SetValue(value)) return;
 
+                // ⭐ UI → Model，即時同步
                 if (_model != null)
-                    _model.Fcnt2 = value;     // ⭐ 回寫 Model（核心）
+                    _model.Fcnt2 = value;
             }
         }
 
-        // ⭐ 寫暫存器需要
+        public int Fcnt2Min
+        {
+            get { return GetValue<int>(); }
+            private set { SetValue(value); }
+        }
+
+        public int Fcnt2Max
+        {
+            get { return GetValue<int>(); }
+            private set { SetValue(value); }
+        }
+
         public string RegName
         {
             get { return GetValue<string>(); }
@@ -196,7 +152,7 @@ namespace BistMode.ViewModels
 
         public IRelayCommand ApplyCommand { get; }
 
-        // ⭐ 寫入暫存器（使用 model.RemName）
+        // ====== 寫入暫存器 ======
         private void ApplyWrite()
         {
             if (_model == null) return;
@@ -205,11 +161,9 @@ namespace BistMode.ViewModels
 
             uint raw = (uint)_model.Fcnt2;
 
-            // 寫入暫存器（例如 BIST_FCNT2）
+            // ⭐ 直接用 Model 裡的暫存器名稱
             _regControl.SetRegisterByName(RegName, raw);
         }
     }
 }
 ```
-
-
