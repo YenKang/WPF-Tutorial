@@ -1,118 +1,127 @@
-using System.Diagnostics;
-using Utility.MVVM.Command;
+<GroupBox Header="Flicker RGB">
+    <GroupBox.DataContext>
+        <Binding Path="FlickerRGBVM"/>
+    </GroupBox.DataContext>
 
-public sealed class FlickerRGBVM : ViewModelBase
-{
-    private FlickerRGBModel _model;
-    private IRegisterControl _regControl;
+    <StackPanel Margin="12">
 
-    public FlickerRGBVM()
-    {
-        ApplyCommand = CommandFactory.CreateCommand(ApplyWrite);
-    }
+        <!-- ---------------- Page 1 ---------------- -->
+        <TextBlock Text="Page 1" FontWeight="Bold" Margin="0,0,0,4"/>
 
-    public void SetRegisterControl(IRegisterControl control)
-    {
-        _regControl = control;
-    }
+        <StackPanel Orientation="Horizontal" Spacing="20">
 
-    // ---------------------------------------------------------
-    //  SetModel (加入 Debug 訊息)
-    // ---------------------------------------------------------
-    public void SetModel(FlickerRGBModel model)
-    {
-        _model = model;
+            <!-- R -->
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60"
+                                    Minimum="0"
+                                    Maximum="15"
+                                    Value="{Binding RPage1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="R"
+                           HorizontalAlignment="Center"
+                           Foreground="Red"/>
+            </StackPanel>
 
-        Debug.WriteLine("=== [FlickerRGBVM] SetModel() ===");
-        Debug.WriteLine(
-            $"Page1 = ({model.RPage1:X2}, {model.GPage1:X2}, {model.BPage1:X2})");
-        Debug.WriteLine(
-            $"Page2 = ({model.RPage2:X2}, {model.GPage2:X2}, {model.BPage2:X2})");
-        Debug.WriteLine(
-            $"Page3 = ({model.RPage3:X2}, {model.GPage3:X2}, {model.BPage3:X2})");
-        Debug.WriteLine(
-            $"Page4 = ({model.RPage4:X2}, {model.GPage4:X2}, {model.BPage4:X2})");
-        Debug.WriteLine("==================================");
+            <!-- G -->
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60"
+                                    Minimum="0"
+                                    Maximum="15"
+                                    Value="{Binding GPage1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="G"
+                           HorizontalAlignment="Center"
+                           Foreground="Green"/>
+            </StackPanel>
 
-        // 對應到 12 個 VM Property
-        RPage1 = model.RPage1;
-        GPage1 = model.GPage1;
-        BPage1 = model.BPage1;
+            <!-- B -->
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60"
+                                    Minimum="0"
+                                    Maximum="15"
+                                    Value="{Binding BPage1, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                <TextBlock Text="B"
+                           HorizontalAlignment="Center"
+                           Foreground="Blue"/>
+            </StackPanel>
 
-        RPage2 = model.RPage2;
-        GPage2 = model.GPage2;
-        BPage2 = model.BPage2;
-
-        RPage3 = model.RPage3;
-        GPage3 = model.GPage3;
-        BPage3 = model.BPage3;
-
-        RPage4 = model.RPage4;
-        GPage4 = model.GPage4;
-        BPage4 = model.BPage4;
-    }
+        </StackPanel>
 
 
-    // ---------------------------------------------------------
-    //  ApplyWrite (加入 Page1~4 簡潔 Debug)
-    // ---------------------------------------------------------
-    private void ApplyWrite()
-    {
-        if (_model == null || _regControl == null)
-            return;
+        <!-- ---------------- Page 2 ---------------- -->
+        <TextBlock Text="Page 2" FontWeight="Bold" Margin="12,8,0,4"/>
 
-        // 寫入 Page1
-        _regControl.SetRegisterByName(_model.RPage1Reg, (uint)_model.RPage1);
-        _regControl.SetRegisterByName(_model.GPage1Reg, (uint)_model.GPage1);
-        _regControl.SetRegisterByName(_model.BPage1Reg, (uint)_model.BPage1);
+        <StackPanel Orientation="Horizontal" Spacing="20">
 
-        // Page2
-        _regControl.SetRegisterByName(_model.RPage2Reg, (uint)_model.RPage2);
-        _regControl.SetRegisterByName(_model.GPage2Reg, (uint)_model.GPage2);
-        _regControl.SetRegisterByName(_model.BPage2Reg, (uint)_model.BPage2);
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding RPage2, Mode=TwoWay}"/>
+                <TextBlock Text="R" HorizontalAlignment="Center" Foreground="Red"/>
+            </StackPanel>
 
-        // Page3
-        _regControl.SetRegisterByName(_model.RPage3Reg, (uint)_model.RPage3);
-        _regControl.SetRegisterByName(_model.GPage3Reg, (uint)_model.GPage3);
-        _regControl.SetRegisterByName(_model.BPage3Reg, (uint)_model.BPage3);
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding GPage2, Mode=TwoWay}"/>
+                <TextBlock Text="G" HorizontalAlignment="Center" Foreground="Green"/>
+            </StackPanel>
 
-        // Page4
-        _regControl.SetRegisterByName(_model.RPage4Reg, (uint)_model.RPage4);
-        _regControl.SetRegisterByName(_model.GPage4Reg, (uint)_model.GPage4);
-        _regControl.SetRegisterByName(_model.BPage4Reg, (uint)_model.BPage4);
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding BPage2, Mode=TwoWay}"/>
+                <TextBlock Text="B" HorizontalAlignment="Center" Foreground="Blue"/>
+            </StackPanel>
 
-        // Debug：一頁一行
-        Debug.WriteLine("=== [FlickerRGBVM] ApplyWrite() ===");
-        Debug.WriteLine(
-            $"Page1 = ({_model.RPage1:X2}, {_model.GPage1:X2}, {_model.BPage1:X2})");
-        Debug.WriteLine(
-            $"Page2 = ({_model.RPage2:X2}, {_model.GPage2:X2}, {_model.BPage2:X2})");
-        Debug.WriteLine(
-            $"Page3 = ({_model.RPage3:X2}, {_model.GPage3:X2}, {_model.BPage3:X2})");
-        Debug.WriteLine(
-            $"Page4 = ({_model.RPage4:X2}, {_model.GPage4:X2}, {_model.BPage4:X2})");
-        Debug.WriteLine("==================================");
-    }
+        </StackPanel>
 
 
-    // ---------------------------------------------------------
-    //  Properties: VM ↔ Model 連動 (保持你原本風格)
-    // ---------------------------------------------------------
-    public int RPage1 { get => GetValue<int>(); set { if (SetValue(value)) _model.RPage1 = value; } }
-    public int GPage1 { get => GetValue<int>(); set { if (SetValue(value)) _model.GPage1 = value; } }
-    public int BPage1 { get => GetValue<int>(); set { if (SetValue(value)) _model.BPage1 = value; } }
+        <!-- ---------------- Page 3 ---------------- -->
+        <TextBlock Text="Page 3" FontWeight="Bold" Margin="12,8,0,4"/>
 
-    public int RPage2 { get => GetValue<int>(); set { if (SetValue(value)) _model.RPage2 = value; } }
-    public int GPage2 { get => GetValue<int>(); set { if (SetValue(value)) _model.GPage2 = value; } }
-    public int BPage2 { get => GetValue<int>(); set { if (SetValue(value)) _model.BPage2 = value; } }
+        <StackPanel Orientation="Horizontal" Spacing="20">
 
-    public int RPage3 { get => GetValue<int>(); set { if (SetValue(value)) _model.RPage3 = value; } }
-    public int GPage3 { get => GetValue<int>(); set { if (SetValue(value)) _model.GPage3 = value; } }
-    public int BPage3 { get => GetValue<int>(); set { if (SetValue(value)) _model.BPage3 = value; } }
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding RPage3, Mode=TwoWay}"/>
+                <TextBlock Text="R" HorizontalAlignment="Center" Foreground="Red"/>
+            </StackPanel>
 
-    public int RPage4 { get => GetValue<int>(); set { if (SetValue(value)) _model.RPage4 = value; } }
-    public int GPage4 { get => GetValue<int>(); set { if (SetValue(value)) _model.GPage4 = value; } }
-    public int BPage4 { get => GetValue<int>(); set { if (SetValue(value)) _model.BPage4 = value; } }
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding GPage3, Mode=TwoWay}"/>
+                <TextBlock Text="G" HorizontalAlignment="Center" Foreground="Green"/>
+            </StackPanel>
 
-    public IRelayCommand ApplyCommand { get; }
-}
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding BPage3, Mode=TwoWay}"/>
+                <TextBlock Text="B" HorizontalAlignment="Center" Foreground="Blue"/>
+            </StackPanel>
+
+        </StackPanel>
+
+
+        <!-- ---------------- Page 4 ---------------- -->
+        <TextBlock Text="Page 4" FontWeight="Bold" Margin="12,8,0,4"/>
+
+        <StackPanel Orientation="Horizontal" Spacing="20">
+
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding RPage4, Mode=TwoWay}"/>
+                <TextBlock Text="R" HorizontalAlignment="Center" Foreground="Red"/>
+            </StackPanel>
+
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding GPage4, Mode=TwoWay}"/>
+                <TextBlock Text="G" HorizontalAlignment="Center" Foreground="Green"/>
+            </StackPanel>
+
+            <StackPanel>
+                <xctk:IntegerUpDown Width="60" Minimum="0" Maximum="15"
+                                    Value="{Binding BPage4, Mode=TwoWay}"/>
+                <TextBlock Text="B" HorizontalAlignment="Center" Foreground="Blue"/>
+            </StackPanel>
+
+        </StackPanel>
+
+    </StackPanel>
+</GroupBox>
