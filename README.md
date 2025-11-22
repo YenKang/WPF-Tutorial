@@ -1,224 +1,152 @@
-## FlickerRGBVM.vs
+## xaml
 
 ```
-using BistMode.Models;
-using Utility.MVVM;
-using Utility.MVVM.Command;
+<GroupBox Header="Flicker RGB Control"
+          Margin="0,12,0,12">
 
-namespace BistMode.ViewModels
-{
-    public sealed class FlickerRGBVM : ViewModelBase
-    {
-        private FlickerRGBModel _model;
-        private IRegisterReadWriteEx _regControl;
+    <StackPanel Margin="12">
 
-        public FlickerRGBVM()
-        {
-            ApplyCommand = CommandFactory.CreateCommand(ApplyWrite);
-        }
+        <!--====================== Page 1 ======================-->
+        <TextBlock Text="Page 1" FontWeight="Bold" Margin="0,0,0,6"/>
 
-        public void SetRegisterControl(IRegisterReadWriteEx control)
-        {
-            _regControl = control;
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="R1" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.RPage1, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        // ⭐ 你要的重點：SetModel
-        public void SetModel(FlickerRGBModel model)
-        {
-            _model = model;
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="G1" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.GPage1, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-            if (_model == null)
-            {
-                // 沒有 model 時，把 UI 清空成 0
-                RPage1 = GPage1 = BPage1 =
-                RPage2 = GPage2 = BPage2 =
-                RPage3 = GPage3 = BPage3 =
-                RPage4 = GPage4 = BPage4 = 0;
-                return;
-            }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="B1" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.BPage1, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-            // Model → VM
-            RPage1 = _model.RPage1;
-            GPage1 = _model.GPage1;
-            BPage1 = _model.BPage1;
 
-            RPage2 = _model.RPage2;
-            GPage2 = _model.GPage2;
-            BPage2 = _model.BPage2;
+        <!--====================== Page 2 ======================-->
+        <TextBlock Text="Page 2" FontWeight="Bold" Margin="0,8,0,6"/>
 
-            RPage3 = _model.RPage3;
-            GPage3 = _model.GPage3;
-            BPage3 = _model.BPage3;
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="R2" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.RPage2, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-            RPage4 = _model.RPage4;
-            GPage4 = _model.GPage4;
-            BPage4 = _model.BPage4;
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="G2" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.GPage2, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        // ===== Page1 =====
-        public int RPage1
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.RPage1 = value;   // UI → Model
-            }
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="B2" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.BPage2, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        public int GPage1
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.GPage1 = value;
-            }
-        }
 
-        public int BPage1
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.BPage1 = value;
-            }
-        }
+        <!--====================== Page 3 ======================-->
+        <TextBlock Text="Page 3" FontWeight="Bold" Margin="0,8,0,6"/>
 
-        // ===== Page2 =====
-        public int RPage2
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.RPage2 = value;
-            }
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="R3" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.RPage3, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        public int GPage2
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.GPage2 = value;
-            }
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="G3" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.GPage3, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        public int BPage2
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.BPage2 = value;
-            }
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="B3" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.BPage3, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        // ===== Page3 =====
-        public int RPage3
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.RPage3 = value;
-            }
-        }
 
-        public int GPage3
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.GPage3 = value;
-            }
-        }
+        <!--====================== Page 4 ======================-->
+        <TextBlock Text="Page 4" FontWeight="Bold" Margin="0,8,0,6"/>
 
-        public int BPage3
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.BPage3 = value;
-            }
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="R4" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.RPage4, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        // ===== Page4 =====
-        public int RPage4
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.RPage4 = value;
-            }
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="G4" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.GPage4, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        public int GPage4
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.GPage4 = value;
-            }
-        }
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="B4" Width="40" VerticalAlignment="Center"/>
+            <xctk:IntegerUpDown
+                Width="70"
+                Minimum="0"
+                Maximum="15"
+                Value="{Binding FlickerRGBVM.BPage4, Mode=TwoWay}"
+                FormatString="X2" />
+        </StackPanel>
 
-        public int BPage4
-        {
-            get { return GetValue<int>(); }
-            set
-            {
-                if (!SetValue(value)) return;
-                if (_model != null) _model.BPage4 = value;
-            }
-        }
-
-        // ===== 寫入暫存器 =====
-        public IRelayCommand ApplyCommand { get; }
-
-        private void ApplyWrite()
-        {
-            if (_model == null || _regControl == null)
-                return;
-
-            // Page1
-            if (!string.IsNullOrEmpty(_model.RPage1Reg))
-                _regControl.SetRegisterByName(_model.RPage1Reg, (uint)_model.RPage1);
-            if (!string.IsNullOrEmpty(_model.GPage1Reg))
-                _regControl.SetRegisterByName(_model.GPage1Reg, (uint)_model.GPage1);
-            if (!string.IsNullOrEmpty(_model.BPage1Reg))
-                _regControl.SetRegisterByName(_model.BPage1Reg, (uint)_model.BPage1);
-
-            // Page2
-            if (!string.IsNullOrEmpty(_model.RPage2Reg))
-                _regControl.SetRegisterByName(_model.RPage2Reg, (uint)_model.RPage2);
-            if (!string.IsNullOrEmpty(_model.GPage2Reg))
-                _regControl.SetRegisterByName(_model.GPage2Reg, (uint)_model.GPage2);
-            if (!string.IsNullOrEmpty(_model.BPage2Reg))
-                _regControl.SetRegisterByName(_model.BPage2Reg, (uint)_model.BPage2);
-
-            // Page3
-            if (!string.IsNullOrEmpty(_model.RPage3Reg))
-                _regControl.SetRegisterByName(_model.RPage3Reg, (uint)_model.RPage3);
-            if (!string.IsNullOrEmpty(_model.GPage3Reg))
-                _regControl.SetRegisterByName(_model.GPage3Reg, (uint)_model.GPage3);
-            if (!string.IsNullOrEmpty(_model.BPage3Reg))
-                _regControl.SetRegisterByName(_model.BPage3Reg, (uint)_model.BPage3);
-
-            // Page4
-            if (!string.IsNullOrEmpty(_model.RPage4Reg))
-                _regControl.SetRegisterByName(_model.RPage4Reg, (uint)_model.RPage4);
-            if (!string.IsNullOrEmpty(_model.GPage4Reg))
-                _regControl.SetRegisterByName(_model.GPage4Reg, (uint)_model.GPage4);
-            if (!string.IsNullOrEmpty(_model.BPage4Reg))
-                _regControl.SetRegisterByName(_model.BPage4Reg, (uint)_model.BPage4);
-        }
-    }
-}
+        <!-- Write button -->
+        <Button Content="Set Flicker RGB"
+                Width="140"
+                Height="32"
+                HorizontalAlignment="Left"
+                Command="{Binding FlickerRGBVM.ApplyCommand}"/>
+    </StackPanel>
+</GroupBox>
 ```
