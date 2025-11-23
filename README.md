@@ -1,31 +1,76 @@
-//------------------------------
-// patternOrder (動態 N 筆)
-//------------------------------
-m.OrderRegs.Clear();
-m.OrderValues.Clear();
+<GroupBox Header="Auto Run Config"
+          Margin="0,12,0,12"
+          Visibility="{Binding Path=IsAutoRunConfigVisible}">
+    <StackPanel Margin="12">
 
-// register 是「陣列」不是 JObject
-var regArray = autoRunNode["patternOrder"]?["register"] as JArray;
+        <!-- Pattern Total -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+            <TextBlock Text="Pattern Total"
+                       VerticalAlignment="Center"
+                       Width="120"/>
+            <xctk:IntegerUpDown Width="80"
+                                Minimum="1"
+                                Maximum="30"
+                                Value="{Binding AutoRunVM.Total,
+                                                Mode=TwoWay,
+                                                UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
 
-if (regArray != null)
-{
-    foreach (var jo in regArray.OfType<JObject>())
-    {
-        // 每一格只有一個屬性：{ "BIST_PT_ORD0": 0 }
-        var prop = jo.Properties().FirstOrDefault();
-        if (prop == null)
-            continue;
+        <!-- Pattern Orders -->
+        <ItemsControl ItemsSource="{Binding AutoRunVM.Orders}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
 
-        string regName  = prop.Name;                 // "BIST_PT_ORD0"
-        int defaultVal  = prop.Value.Value<int>();   // 0, 1, 2…
+                        <TextBlock Text="{Binding DisplayNo}"
+                                   VerticalAlignment="Center"
+                                   Width="40"/>
 
-        m.OrderRegs.Add(regName);
-        m.OrderValues.Add(defaultVal);
+                        <xctk:IntegerUpDown Width="80"
+                                            Minimum="0"
+                                            Maximum="255"
+                                            Value="{Binding SelectedIndex,
+                                                            Mode=TwoWay,
+                                                            UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
-        Debug.WriteLine($"[AutoRun] OrderReg={regName}, Default={defaultVal}");
-    }
-}
-else
-{
-    Debug.WriteLine("[AutoRun] patternOrder.register is NULL");
-}
+        <!-- FCNT1 -->
+        <StackPanel Orientation="Horizontal" Margin="0,16,0,8">
+            <TextBlock Text="FCNT1"
+                       VerticalAlignment="Center"
+                       Width="120"/>
+            <xctk:IntegerUpDown Width="100"
+                                Minimum="0"
+                                Maximum="4095"
+                                FormatString="X3"
+                                Value="{Binding AutoRunVM.Fcnt1,
+                                                Mode=TwoWay,
+                                                UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <!-- FCNT2 -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+            <TextBlock Text="FCNT2"
+                       VerticalAlignment="Center"
+                       Width="120"/>
+            <xctk:IntegerUpDown Width="100"
+                                Minimum="0"
+                                Maximum="4095"
+                                FormatString="X3"
+                                Value="{Binding AutoRunVM.Fcnt2,
+                                                Mode=TwoWay,
+                                                UpdateSourceTrigger=PropertyChanged}"/>
+        </StackPanel>
+
+        <!-- Apply Button -->
+        <Button Content="Set Auto Run"
+                Width="140"
+                Height="32"
+                HorizontalAlignment="Left"
+                Command="{Binding AutoRunVM.ApplyCommand}"/>
+
+    </StackPanel>
+</GroupBox>
