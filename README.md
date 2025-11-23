@@ -1,34 +1,37 @@
-public sealed class AutoRunVM : ViewModelBase
+private void UpdateIcDlSel()
 {
-    // AutoRunVM 成員...
-
-    // -----------------------------
-    // Slot class 放在 AutoRunVM 下面
-    // -----------------------------
-    public sealed class OrderSlot : ViewModelBase
+    // 1. 若勾選 Broadcast → 固定 0x4
+    if (IsBroadcastEn)
     {
-        private readonly AutoRunModel _model;
-
-        public int Index { get; }
-
-        public OrderSlot(AutoRunModel model, int index, int value)
-        {
-            _model = model;
-            Index  = index;
-            SetValue(value);
-        }
-
-        public int Value
-        {
-            get => GetValue<int>();
-            set
-            {
-                if (!SetValue(value)) return;
-
-                _model.OrderValues[Index] = value;
-
-                Debug.WriteLine($"[AutoRun][Slot] Index={Index} => Value={value}");
-            }
-        }
+        IcDlSel = 0x4;   // 100b
+        return;
     }
+
+    // 2. 沒勾 Broadcast：依 SelectedIC (ICIndex enum) 決定數值
+    int icDlSelValue;
+
+    switch (SelectedIC)
+    {
+        case ICIndex.Primary:
+            icDlSelValue = 0x0;   // 000b
+            break;
+
+        case ICIndex.L1:
+            icDlSelValue = 0x1;   // 001b
+            break;
+
+        case ICIndex.L2:
+            icDlSelValue = 0x2;   // 010b
+            break;
+
+        case ICIndex.L3:
+            icDlSelValue = 0x3;   // 011b
+            break;
+
+        default:
+            icDlSelValue = 0x0;   // 安全預設
+            break;
+    }
+
+    IcDlSel = icDlSelValue;
 }
