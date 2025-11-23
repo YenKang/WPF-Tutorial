@@ -1,7 +1,6 @@
 <GroupBox Header="{Binding AutoRunVM.Title}"
           Margin="0,12,0,12">
 
-    <!-- 使用外層 AutoRunVM -->
     <GroupBox.DataContext>
         <Binding Path="AutoRunVM"/>
     </GroupBox.DataContext>
@@ -19,22 +18,23 @@
                                 Value="{Binding Total, Mode=TwoWay}"/>
         </StackPanel>
 
-        <!-- 固定 22 筆 Pattern Order（每筆一個 UpDown） -->
+        <!-- Pattern Orders (UpDown 格式) -->
         <ItemsControl ItemsSource="{Binding Orders}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
 
-                        <!-- 顯示序號 1~22 -->
+                        <!-- 序號：來自 OrderSlot.Index -->
                         <TextBlock Text="{Binding Index}"
-                                   VerticalAlignment="Center"
-                                   Width="40"/>
+                                   Width="40"
+                                   VerticalAlignment="Center"/>
 
-                        <!-- UpDown (raw value) -->
+                        <!-- UpDown：raw 數值 -->
                         <xctk:IntegerUpDown Width="80"
                                             Minimum="0"
                                             Maximum="255"
                                             Value="{Binding Value, Mode=TwoWay}"/>
+
                     </StackPanel>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -48,8 +48,8 @@
             <xctk:IntegerUpDown Width="100"
                                 Minimum="0"
                                 Maximum="4095"
-                                Value="{Binding Fcnt1, Mode=TwoWay}"
-                                FormatString="X3"/>
+                                FormatString="X3"
+                                Value="{Binding Fcnt1, Mode=TwoWay}"/>
         </StackPanel>
 
         <!-- FCNT2 -->
@@ -60,11 +60,11 @@
             <xctk:IntegerUpDown Width="100"
                                 Minimum="0"
                                 Maximum="4095"
-                                Value="{Binding Fcnt2, Mode=TwoWay}"
-                                FormatString="X3"/>
+                                FormatString="X3"
+                                Value="{Binding Fcnt2, Mode=TwoWay}"/>
         </StackPanel>
 
-        <!-- Apply -->
+        <!-- Apply Button -->
         <Button Content="Set Auto Run"
                 Width="140"
                 Height="32"
