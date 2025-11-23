@@ -1,6 +1,7 @@
 <GroupBox Header="Auto Run Config"
           Margin="0,12,0,12"
-          Visibility="{Binding Path=IsAutoRunConfigVisible}">
+          Visibility="{Binding IsAutoRunConfigVisible}">
+
     <StackPanel Margin="12">
 
         <!-- Pattern Total -->
@@ -16,16 +17,18 @@
                                                 UpdateSourceTrigger=PropertyChanged}"/>
         </StackPanel>
 
-        <!-- Pattern Orders -->
+        <!-- Pattern Order 1~N -->
         <ItemsControl ItemsSource="{Binding AutoRunVM.Orders}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
 
+                        <!-- 顯示序號 -->
                         <TextBlock Text="{Binding DisplayNo}"
                                    VerticalAlignment="Center"
                                    Width="40"/>
 
+                        <!-- UpDown 調整 SelectedIndex -->
                         <xctk:IntegerUpDown Width="80"
                                             Minimum="0"
                                             Maximum="255"
@@ -65,7 +68,7 @@
                                                 UpdateSourceTrigger=PropertyChanged}"/>
         </StackPanel>
 
-        <!-- Apply Button -->
+        <!-- Apply -->
         <Button Content="Set Auto Run"
                 Width="140"
                 Height="32"
