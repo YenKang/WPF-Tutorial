@@ -18,22 +18,24 @@
                                 Value="{Binding Total, Mode=TwoWay}"/>
         </StackPanel>
 
-        <!-- Pattern Orders (UpDown 格式) -->
+        <!-- 22 個 Pattern Order -->
         <ItemsControl ItemsSource="{Binding Orders}">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,4">
 
-                        <!-- 序號：來自 OrderSlot.Index -->
-                        <TextBlock Text="{Binding Index}"
-                                   Width="40"
-                                   VerticalAlignment="Center"/>
+                        <!-- 顯示序號（你 VM 用 DisplayNo） -->
+                        <TextBlock Text="{Binding DisplayNo}"
+                                   VerticalAlignment="Center"
+                                   Width="40"/>
 
-                        <!-- UpDown：raw 數值 -->
+                        <!-- 原本 ComboBox → 改 UpDown；綁 SelectedIndex -->
                         <xctk:IntegerUpDown Width="80"
                                             Minimum="0"
                                             Maximum="255"
-                                            Value="{Binding Value, Mode=TwoWay}"/>
+                                            Value="{Binding SelectedIndex,
+                                                            Mode=TwoWay,
+                                                            UpdateSourceTrigger=PropertyChanged}"/>
 
                     </StackPanel>
                 </DataTemplate>
@@ -64,7 +66,7 @@
                                 Value="{Binding Fcnt2, Mode=TwoWay}"/>
         </StackPanel>
 
-        <!-- Apply Button -->
+        <!-- Apply -->
         <Button Content="Set Auto Run"
                 Width="140"
                 Height="32"
