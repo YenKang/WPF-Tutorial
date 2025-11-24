@@ -1,59 +1,109 @@
-## UI
+## 1️⃣ BwLoopControlParser.cs
 
-```xaml
-<TabItem Header="ASCII">
-    <Grid Background="Yellow" Margin="8">
+```
+using System.Diagnostics;
+using Newtonsoft.Json.Linq;
+using BistMode.Services;
+// using BistMode.ViewModels; // 如果 PatternItem 在這裡就打開
 
-        <!-- 兩行：表頭 + 資料列表 -->
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>   <!-- Header -->
-            <RowDefinition Height="*"/>      <!-- Data Rows -->
-        </Grid.RowDefinitions>
+namespace BistMode.Parsers
+{
+    public sealed class BwLoopControlParser : IPatternControlParser
+    {
+        // 這兩個參數，就是你原本 ParsePatternNodeToModel(PatternItem p, Services.PatternItem node) 裡的 p / node
+        public void Parse(PatternItem p, PatternItem node)
+        {
+            // 創建 bwLoopControl Model
+            var bwLoopControlNode = node.BWLoopControl as JObject;
+            if (bwLoopControlNode == null)
+                return;
 
-        <!-- 表頭 -->
-        <Grid Grid.Row="0" Margin="0,0,0,4">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="2*"/>   <!-- Register Name -->
-                <ColumnDefinition Width="*"/>    <!-- Image Select -->
-            </Grid.ColumnDefinitions>
+            // 取出 fcnt2 這個物件
+            var fcnt2Obj = bwLoopControlNode["fcnt2"] as JObject;
+            if (fcnt2Obj == null)
+            {
+                Debug.WriteLine("[BWLoop LoadFrom] fcnt2 node is null!");
+                return;
+            }
 
-            <TextBlock Grid.Column="0"
-                       Text="Register Name"
-                       FontWeight="Bold"
-                       Margin="0,0,0,2"/>
+            // fcnt2
+            int fcnt2Default = fcnt2Obj["default"]?.Value<int>() ?? 30;
+            int fcnt2Max     = fcnt2Obj["max"]?.Value<int>()     ?? 600;
+            int fcnt2Min     = fcnt2Obj["min"]?.Value<int>()     ?? 600;
+            string regName   = fcnt2Obj["register"]?.ToString().Trim() ?? string.Empty;
 
-            <TextBlock Grid.Column="1"
-                       Text="Image Select"
-                       FontWeight="Bold"
-                       Margin="8,0,0,2"/>
-        </Grid>
+            var bwLoopModel = new BWLoopModel
+            {
+                RegName = regName,
+                Fcnt2   = fcnt2Default,
+                Fcnt2Max = fcnt2Max,
+                Fcnt2Min = fcnt2Min,
+            };
 
-        <!-- 資料列表 -->
-        <ItemsControl Grid.Row="1"
-                      ItemsSource="{Binding AsilSlots}">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Grid Margin="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+            p.BWLoopModel = bwLoopModel;
+        }
+    }
+}
+```
 
-                        <!-- 左：RegName -->
-                        <TextBlock Grid.Column="0"
-                                   Text="{Binding RegName}"
-                                   VerticalAlignment="Center"/>
+## step2: IPatternControlParser
 
-                        <!-- 右：選圖片按鈕 -->
-                        <Button Grid.Column="1"
-                                Margin="8,0,0,0"
-                                Content="{Binding SelectedImage.Key, FallbackValue=選圖片}"
-                                Click="OpenAsilIconPicker_Click"/>
-                    </Grid>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+```
+using BistMode.Services;
 
-    </Grid>
-</TabItem>
+namespace BistMode.Parsers
+{
+    public interface IPatternControlParser
+    {
+        void Parse(PatternItem p, PatternItem node);
+    }
+}
+```
+
+## Step3:_controlParsers 註冊
+
+```
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using BistMode.Services;
+using BistMode.Parsers;
+
+public class BistModeViewModel
+{
+    private readonly Dictionary<string, IPatternControlParser> _controlParsers;
+
+    public BistModeViewModel()
+    {
+        _controlParsers = new Dictionary<string, IPatternControlParser>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "bwLoopControl", new BwLoopControlParser() },
+            // 之後會陸續加：
+            // { "grayReverseControl", new GrayReverseControlParser() },
+            // { "grayLevelControl",   new GrayLevelControlParser() },
+            // ...
+        };
+    }
+
+    #region 初始化解析 JSON Node
+    public void ParsePatternNodeToModel(PatternItem p, PatternItem node)
+    {
+        if (node.RegControlType == null || node.RegControlType.Count == 0)
+            return;
+
+        foreach (var type in node.RegControlType)
+        {
+            IPatternControlParser parser;
+            if (_controlParsers.TryGetValue(type, out parser))
+            {
+                parser.Parse(p, node);
+            }
+            else
+            {
+                Debug.WriteLine("[ParsePatternNode] Unknown control type: " + type);
+            }
+        }
+    }
+    #endregion
+}
 ```
