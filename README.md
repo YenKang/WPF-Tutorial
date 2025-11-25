@@ -1,42 +1,67 @@
-<Button Content="BIST Preset (左鍵執行 / 右鍵編輯)"
-        Margin="6"
-        Command="{Binding RunPresetCommand}">
-    <Button.InputBindings>
-
-        <!-- 🟠 右鍵：EditPresetCommand -->
-        <MouseBinding MouseAction="RightClick"
-                      Command="{Binding EditPresetCommand}" />
-
-    </Button.InputBindings>
-</Button>
-
-
-public void ExecutePresetScript()
+```
+private void OpenAsilIconPicker_Click(object sender, RoutedEventArgs e)
 {
-    if (!File.Exists(_presetScriptPath))
-    {
-        ShowMessage("找不到 preset 檔：\n" + _presetScriptPath);
+    var btn  = sender as Button;
+    var slot = btn?.DataContext as RegAsciiSlotModel;
+    if (slot == null)
         return;
-    }
 
-    string[] lines;
-
-    try
+    if (DataContext is IconToImageViewModel vm)
     {
-        lines = File.ReadAllLines(_presetScriptPath);
+        vm.OpenAsilIconPicker(slot, this);   // this 當 Owner 傳進去
     }
-    catch (Exception ex)
-    {
-        ShowMessage("讀取 preset 檔失敗：\n" + ex.Message);
-        return;
-    }
-
-    // 🔵 一行一行顯示（先做這個，不做解析、不寫暫存器）
-    string all = "";
-    foreach (var raw in lines)
-    {
-        all += raw + "\n";     // 把每一行附加起來
-    }
-
-    ShowMessage(all);          // 跳出視窗顯示所有行
 }
+```
+
+## 6-2. 在 ViewModel 實作 OpenAsilIconPicker
+```
+public void OpenAsilIconPicker(RegAsciiSlotModel slot, Window owner)
+{
+    if (slot == null)
+        return;
+
+    // 1️⃣ 只取有選圖的 OSD，依 OSD# 排序，取前 16 個
+    var iconButtons = OSDICButtonList
+        .Where(b => b.OsdSelectedImage != null)
+        .OrderBy(b => b.OsdIndex)
+        .Take(16)
+        .ToList();
+
+    if (iconButtons.Count == 0)
+    {
+        MessageBox.Show(owner,
+            "目前沒有任何 OSD 選圖可用，請先在 Main 頁選好 OSD Icon。",
+            "提示",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+        return;
+    }
+
+    // 2️⃣ 只把圖片丟給圖片牆（如果你現有的 ImagePickerWindow 是吃 List<ImageOption>）
+    var candidates = iconButtons
+        .Select(b => b.OsdSelectedImage)
+        .ToList();
+
+    var picker = new ImagePickerWindow(candidates, slot.SelectedImage);
+    picker.Owner = owner;
+
+    if (picker.ShowDialog() == true && picker.SelectedImage != null)
+    {
+        // 3️⃣ ASIL slot 記住這張圖
+        slot.SelectedImage = picker.SelectedImage;
+
+        // 4️⃣ 反查這張圖是來自哪一個 OSD（用 Equals 或 Key）
+        var match = iconButtons
+            .FirstOrDefault(b => b.OsdSelectedImage == picker.SelectedImage);
+
+        if (match != null)
+        {
+            slot.SelectedOsdIndex = match.OsdIndex;  // 🔥 這裡就是你要的 OSD#
+        }
+        else
+        {
+            slot.SelectedOsdIndex = 0; // 或者給個預設值
+        }
+    }
+}
+```
