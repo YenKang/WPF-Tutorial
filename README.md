@@ -1,38 +1,42 @@
-using System;
-using System.IO;
-// 如果你願意，也可以在這裡加：using System.Diagnostics;
+<Button Content="BIST Preset (左鍵執行 / 右鍵編輯)"
+        Margin="6"
+        Command="{Binding RunPresetCommand}">
+    <Button.InputBindings>
 
-...
+        <!-- 🟠 右鍵：EditPresetCommand -->
+        <MouseBinding MouseAction="RightClick"
+                      Command="{Binding EditPresetCommand}" />
 
-private readonly string _presetScriptPath =
-    @"D:\1.AOS\1064_Bist\tddi_engtool\BIST_Preset.py";  // ← 路徑自己改
+    </Button.InputBindings>
+</Button>
 
-public void OpenPresetInEditor()
+
+public void ExecutePresetScript()
 {
+    if (!File.Exists(_presetScriptPath))
+    {
+        ShowMessage("找不到 preset 檔：\n" + _presetScriptPath);
+        return;
+    }
+
+    string[] lines;
+
     try
     {
-        // 先確認檔案存在，避免一按就丟例外
-        if (!File.Exists(_presetScriptPath))
-        {
-            ShowMessage("找不到 preset 檔：\n" + _presetScriptPath);
-            return;
-        }
-
-        var psi = new System.Diagnostics.ProcessStartInfo()
-        {
-            FileName = _presetScriptPath,
-            UseShellExecute = true   // 用系統預設程式開啟 .py
-        };
-
-        System.Diagnostics.Process.Start(psi);
+        lines = File.ReadAllLines(_presetScriptPath);
     }
     catch (Exception ex)
     {
-        ShowMessage("開啟 preset 檔失敗：\n" + ex.Message);
+        ShowMessage("讀取 preset 檔失敗：\n" + ex.Message);
+        return;
     }
-}
 
-private void ShowMessage(string msg)
-{
-    System.Windows.MessageBox.Show(msg, "BIST Preset");
+    // 🔵 一行一行顯示（先做這個，不做解析、不寫暫存器）
+    string all = "";
+    foreach (var raw in lines)
+    {
+        all += raw + "\n";     // 把每一行附加起來
+    }
+
+    ShowMessage(all);          // 跳出視窗顯示所有行
 }
