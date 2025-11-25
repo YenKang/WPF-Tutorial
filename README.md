@@ -1,65 +1,38 @@
-<Button Content="BIST Preset (右鍵編輯)"
-        Margin="4"
-        Command="{Binding RunPresetCommand}">
-    <Button.InputBindings>
-        <!-- 右鍵：開啟文字編輯器 -->
-        <MouseBinding MouseAction="RightClick"
-                      Command="{Binding EditPresetCommand}" />
-    </Button.InputBindings>
-</Button>
-
-
-=====
-
-,,,
 using System;
-using System.Diagnostics;
 using System.IO;
-using System.Globalization;
-using System.Windows.Input;
+// 如果你願意，也可以在這裡加：using System.Diagnostics;
 
-public class BistModeViewModel : ViewModelBase
+...
+
+private readonly string _presetScriptPath =
+    @"D:\1.AOS\1064_Bist\tddi_engtool\BIST_Preset.py";  // ← 路徑自己改
+
+public void OpenPresetInEditor()
 {
-    // TODO: 這裡改成你實際的檔案路徑
-    private readonly string _presetScriptPath =
-        @"D:\BistScripts\BIST_Preset.py";
-
-    public ICommand RunPresetCommand  { get; private set; }
-    public ICommand EditPresetCommand { get; private set; }
-
-    public BistModeViewModel()
+    try
     {
-        RunPresetCommand  = new RelayCommand(_ => ExecutePresetScript());
-        EditPresetCommand = new RelayCommand(_ => OpenPresetInEditor());
-    }
-
-    // 🟠 右鍵：打開 python 檔給你編輯
-    private void OpenPresetInEditor()
-    {
-        try
+        // 先確認檔案存在，避免一按就丟例外
+        if (!File.Exists(_presetScriptPath))
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = _presetScriptPath,
-                UseShellExecute = true   // 用系統預設程式開啟 .py
-            };
-,
-            Process.Start(psi);
+            ShowMessage("找不到 preset 檔：\n" + _presetScriptPath);
+            return;
         }
-        catch (Exception ex)
-        {
-            ShowMessage("開啟 preset 檔失敗：\n" + ex.Message);
-        }
-    }
-    
-    private void ShowMessage(string msg)
-    {
-        System.Windows.MessageBox.Show(msg, "BIST Preset");
-    }
 
-    // 下面是左鍵的「先做一半」版本
-    // ...
+        var psi = new System.Diagnostics.ProcessStartInfo()
+        {
+            FileName = _presetScriptPath,
+            UseShellExecute = true   // 用系統預設程式開啟 .py
+        };
+
+        System.Diagnostics.Process.Start(psi);
+    }
+    catch (Exception ex)
+    {
+        ShowMessage("開啟 preset 檔失敗：\n" + ex.Message);
+    }
 }
-,,,
 
-
+private void ShowMessage(string msg)
+{
+    System.Windows.MessageBox.Show(msg, "BIST Preset");
+}
