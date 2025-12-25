@@ -1,46 +1,48 @@
-private async void GenerateBmp_Click(object sender, RoutedEventArgs e)
+private async void Generate()
 {
-    // 1) 讓使用者選輸出資料夾
-    string outputDir = null;
-    using (var dlg = new FolderBrowserDialog())
-    {
-        dlg.Description = "Select output folder for BMP images";
-        dlg.UseDescriptionForTitle = true;
+    var folder = SelectOutputFolder();
+    if (string.IsNullOrWhiteSpace(folder))
+        return;
 
-        var result = dlg.ShowDialog();
-        if (result != System.Windows.Forms.DialogResult.OK || string.IsNullOrWhiteSpace(dlg.SelectedPath))
-            return;
+    OutputFolder = folder;
 
-        outputDir = dlg.SelectedPath;
-    }
-
-    // 2) 取你的 UI 參數（你把這六個變數換成你實際的來源）
-    //    如果你是 TextBox/UpDown，就在這裡讀值；如果你用 VM，就從 DataContext 讀
-    int hStart = HStart;
-    int hEnd   = HEnd;
-    int hStep  = HStep;
-
-    int vStart = VStart;
-    int vEnd   = VEnd;
-    int vStep  = VStep;
-
-    // 3) 背景執行避免 UI 卡住
     try
     {
-        await Task.Run(() =>
+        await System.Threading.Tasks.Task.Run(() =>
         {
             ImageExporter.ExportNoiseBmpBySizeGrid(
-                hStart: hStart, hEnd: hEnd, hStep: hStep,
-                vStart: vStart, vEnd: vEnd, vStep: vStep,
-                outputDir: outputDir,
+                HStart, HEnd, HStep,
+                VStart, VEnd, VStep,
+                OutputFolder,
                 deterministicBySize: true
             );
         });
 
-        MessageBox.Show("BMP export done!");
+        System.Windows.MessageBox.Show("圖片輸出完成");
     }
-    catch (System.Exception ex)
+    catch (Exception ex)
     {
-        MessageBox.Show(ex.Message, "Export failed");
+        System.Windows.MessageBox.Show(ex.Message, "Export failed");
+    }
+}
+
+
+＝＝＝＝＝
+
+private string SelectOutputFolder()
+{
+    using (var dlg = new FolderBrowserDialog())
+    {
+        dlg.Description = "Select output folder";
+        dlg.UseDescriptionForTitle = true;
+
+        if (!string.IsNullOrWhiteSpace(OutputFolder))
+            dlg.SelectedPath = OutputFolder;
+
+        var result = dlg.ShowDialog();
+        if (result != DialogResult.OK || string.IsNullOrWhiteSpace(dlg.SelectedPath))
+            return null;
+
+        return dlg.SelectedPath;
     }
 }
