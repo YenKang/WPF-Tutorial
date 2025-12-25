@@ -1,54 +1,66 @@
-<Window x:Class="OSDIconFlashMap.View.ImagePickerWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Pick an Image" Width="640" Height="520"
-        WindowStartupLocation="CenterOwner">
+using System;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+public static class ImageExporter
+{
+    /// <summary>
+    /// 批次輸出：v = start..end (step)，每張都是隨機像素圖，存到 outputDir
+    /// </summary>
+    public static void ExportNoiseSeries(
+        int start,
+        int end,
+        int step,
+        int width,
+        int height,
+        string outputDir,
+        bool deterministicByValue = true
+    )
+    {
+        if (step <= 0) throw new ArgumentOutOfRangeException(nameof(step));
+        if (width <= 0 || height <= 0) throw new ArgumentOutOfRangeException("width/height must be > 0");
+        if (end < start) throw new ArgumentException("end must be >= start");
 
-        <!-- 原本的 ScrollViewer 整段搬到 Row 0 -->
-        <ScrollViewer Grid.Row="0"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <ItemsControl x:Name="it" Margin="12">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
+        Directory.CreateDirectory(outputDir);
 
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <!-- 你原本 DataTemplate 裡的內容 그대로 保留 -->
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
+        // deterministicByValue=false：每次跑都不一樣
+        var globalRng = deterministicByValue ? null : new Random();
 
-                <ItemsControl.ItemContainerStyle>
-                    <Style TargetType="ContentPresenter">
-                        <EventSetter Event="MouseLeftButtonUp" Handler="OnPick"/>
-                    </Style>
-                </ItemsControl.ItemContainerStyle>
-            </ItemsControl>
-        </ScrollViewer>
+        for (int v = start; v <= end; v += step)
+        {
+            // deterministicByValue=true：同一個 v 永遠產同一張（好 debug）
+            var rng = deterministicByValue ? new Random(v) : globalRng;
 
-        <!-- 新增：右下角 Clear / Confirm -->
-        <StackPanel Grid.Row="1"
-                    Orientation="Horizontal"
-                    HorizontalAlignment="Right"
-                    Margin="8">
-            <Button Content="Clear"
-                    Width="90"
-                    Margin="0,0,8,0"
-                    Click="Clear_Click"/>
-            <Button Content="Confirm"
-                    Width="90"
-                    Click="Confirm_Click"/>
-        </StackPanel>
-    </Grid>
-</Window>
+            using (var bmp = GenerateRandomPixelBitmap(width, height, rng))
+            {
+                string fileName = $"noise_{v:D3}_{width}x{height}.png";
+                string path = Path.Combine(outputDir, fileName);
+                bmp.Save(path, ImageFormat.Png);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 單張圖：每個像素都是隨機 RGB
+    /// </summary>
+    private static Bitmap GenerateRandomPixelBitmap(int width, int height, Random rng)
+    {
+        var bmp = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                var c = Color.FromArgb(
+                    rng.Next(256), // R
+                    rng.Next(256), // G
+                    rng.Next(256)  // B
+                );
+                bmp.SetPixel(x, y, c);
+            }
+        }
+
+        return bmp;
+    }
+}
