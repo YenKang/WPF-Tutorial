@@ -1,77 +1,86 @@
+using System;
+
 /// <summary>
-/// 將 Flash 1bpp bitstream 轉成 pixel array (0/1)
+/// 把 Flash 的「1bpp 壓縮 bitstream」還原成「每 pixel 一格的 0/1 陣列」
 ///
-/// Flash 中的圖片格式是：
-///   - 1 bit = 1 pixel
-///   - 同一個 byte 內使用 MSB first（bit7 → bit0）
-///   - 像素排列順序是 row-major（左到右、上到下）
+/// ✅ 規則：
+/// 1) 1 bit = 1 pixel
+/// 2) MSB first：同一個 byte 內，bit7 → bit0 依序代表下一個 pixel
+/// 3) row-major：畫面掃描順序是「左到右、上到下」
 ///
-/// 例如 3x2 圖：
-///   1 0 1
-///   1 1 1
+/// ------------------------------
+/// 【案例】寬=3, 高=2 的圖：
+///   Row0: 1 0 1
+///   Row1: 1 1 1
 ///
-/// 在 Flash 會被壓成 bitstream：
-///   10111100 = 0xBC
+/// 將 pixel 串成 bitstream： 1 0 1  1 1 1   (共 6 bits)
+/// 因為 Flash 以 byte 為單位存，所以會補滿 8 bits：
+///   1 0 1 1 1 1 0 0  => 二進位 10111100 => 0xBC
 ///
-/// 這個函式要做的事：
-///   0xBC  →  [1,0,1, 1,1,1]
-/// 也就是「每一個 bit 拆成一個 byte 的 0/1」
+/// 所以輸入：data = { 0xBC }
+/// 期待輸出：dataArr = [1,0,1, 1,1,1]
+/// ------------------------------
 /// </summary>
 static byte[] FlashDataToByteArray(int osdWidth, int osdHeight, byte[] data)
 {
-    // 圖片總 pixel 數
-    // 例如 3x2 = 6
+    // 總 pixel 數 (例如 3x2 = 6)
     int totalPixels = osdWidth * osdHeight;
 
-    // 這些 pixel 在 1bpp Flash 裡至少需要多少 bytes
-    // 例如 6 bits → 1 byte
-    int requiredBytes = (totalPixels + 7) / 8;
-
-    if (data == null)
-        throw new ArgumentNullException(nameof(data));
-
-    if (data.Length < requiredBytes)
-        throw new ArgumentException($"Flash data too short, need {requiredBytes} bytes");
-
-    // 輸出：每一個 pixel 用一個 byte 表示 (0 或 1)
-    // 長度 = osdWidth * osdHeight
+    // 輸出：每個 pixel 用 1 byte 表示，值只會是 0 或 1
     byte[] dataArr = new byte[totalPixels];
 
-    // pixelIndex 指向 dataArr 中「第幾個 pixel」
+    // pixelIndex：寫入 dataArr 的位置（第幾個 pixel）
     int pixelIndex = 0;
 
-    // bitIndex 指向 Flash bitstream 中「第幾個 bit」
-    // 0 = 第一個 pixel，1 = 第二個 pixel ...
+    // bitIndex：從 bitstream 讀到第幾個 bit（第幾個 pixel）
     int bitIndex = 0;
 
-    // 依畫面掃描順序（row-major）取 pixel
+    // 依照 row-major：y(列) 外圈，x(欄) 內圈
     for (int y = 0; y < osdHeight; y++)
     {
         for (int x = 0; x < osdWidth; x++)
         {
-            // 這個 pixel 對應到 Flash data 的哪一個 byte
-            // 例如 bitIndex = 10 → 10 / 8 = 1 → data[1]
-            int byteIndex = bitIndex >> 3;
+            // ------------------------------
+            // 【bitIndex -> data[] 的定位方式】
+            //
+            // byteIndex = bitIndex / 8
+            // 代表：第 bitIndex 個 bit 在 data[byteIndex] 裡面
+            //
+            // bitInByte = 7 - (bitIndex % 8)
+            // 因為 MSB first：先讀 bit7，再 bit6 ... 最後 bit0
+            //
+            // 【案例：data = 0xBC = 10111100】
+            // bitIndex=0 -> byteIndex=0, bitInByte=7 -> 取到 '1'
+            // bitIndex=1 -> byteIndex=0, bitInByte=6 -> 取到 '0'
+            // bitIndex=2 -> byteIndex=0, bitInByte=5 -> 取到 '1'
+            // bitIndex=3 -> byteIndex=0, bitInByte=4 -> 取到 '1'
+            // bitIndex=4 -> byteIndex=0, bitInByte=3 -> 取到 '1'
+            // bitIndex=5 -> byteIndex=0, bitInByte=2 -> 取到 '1'
+            // （後面 bitIndex=6,7 是 padding，不屬於圖的 6 個 pixel，所以不會再讀）
+            // ------------------------------
 
-            // 在這個 byte 裡是第幾個 bit
-            // 因為 Flash 是 MSB first：
-            //   bitIndex%8 = 0 → bit7
-            //   bitIndex%8 = 1 → bit6
-            //   ...
-            int bitInByte = 7 - (bitIndex & 7);
+            int byteIndex = bitIndex >> 3;          // bitIndex / 8
+            int bitInByte = 7 - (bitIndex & 7);     // MSB first
 
             // 取出該 bit：
-            // 1. data[byteIndex] >> bitInByte 把目標 bit 移到最低位
-            // 2. & 1 只留下 0 或 1
-            byte pixel = (byte)((data[byteIndex] >> bitInByte) & 0x01);
+            // 1) 右移 bitInByte，把目標 bit 移到最低位
+            // 2) & 1 只留最低位
+            //
+            // 【案例：data[0] = 0xBC = 10111100】
+            // bitIndex=2 時：bitInByte=5
+            // (0xBC >> 5) = 0b00000101
+            // & 1 => 1
+            byte pixel01 = (byte)((data[byteIndex] >> bitInByte) & 0x01);
 
-            // 存到 pixel array
-            dataArr[pixelIndex++] = pixel;
+            // 寫入輸出陣列：每 pixel 一格
+            dataArr[pixelIndex++] = pixel01;
 
-            // 前進到下一個 Flash bit
+            // 前進到下一個 bit（下一個 pixel）
             bitIndex++;
         }
     }
 
+    // 【案例最後輸出】
+    // dataArr = [1,0,1, 1,1,1]
     return dataArr;
 }
